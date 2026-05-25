@@ -1,46 +1,25 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { api, type Project, type Task } from '$lib/api';
+	import type { Task } from '$lib/api';
 	import TaskDetail from '$lib/components/TaskDetail.svelte';
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
 	import { relativeDate } from '$lib/utils';
+	import { getDataStore } from '$lib/stores/data.svelte';
 
-	let projects = $state<Project[]>([]);
-	let tasksByProject = $state<Record<string, Task[]>>({});
-	let loading = $state(true);
+	const store = getDataStore();
 	let selectedTask = $state<Task | null>(null);
 	let selectedProjectId = $state('');
 	let addInputs = $state<Record<string, string>>({});
 
-	let groups = $derived(projects.filter(p => !p.parent_id));
-	let childrenOf = $derived((pid: string) => projects.filter(p => p.parent_id === pid));
-
-	onMount(async () => {
-		const [projs, allTasks] = await Promise.all([
-			api.listProjects(),
-			api.listAllTasks(),
-		]);
-		projects = projs;
-		const grouped: Record<string, Task[]> = {};
-		for (const t of allTasks) {
-			if (!grouped[t.project_id]) grouped[t.project_id] = [];
-			grouped[t.project_id].push(t);
-		}
-		tasksByProject = grouped;
-		loading = false;
-	});
+	let groups = $derived(store.projects.filter(p => !p.parent_id));
+	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
 
 	async function toggleDone(task: Task) {
-		const updated = await api.updateTask(task.project_id, task.id, { is_done: !task.is_done });
-		tasksByProject[task.project_id] = (tasksByProject[task.project_id] || []).map(t => t.id === task.id ? updated : t);
-		tasksByProject = { ...tasksByProject };
+		await store.updateTask(task.project_id, task.id, { is_done: !task.is_done });
 	}
 
 	async function addTask(projectId: string, title: string) {
 		if (!title.trim()) return;
-		const t = await api.createTask(projectId, { title: title.trim() });
-		tasksByProject[projectId] = [...(tasksByProject[projectId] || []), t];
-		tasksByProject = { ...tasksByProject };
+		await store.addTask(projectId, { title: title.trim() });
 		addInputs[projectId] = '';
 		addInputs = { ...addInputs };
 	}
@@ -50,26 +29,15 @@
 		selectedProjectId = task.project_id;
 	}
 
-	function onTaskUpdate(updated: Task) {
-		tasksByProject[updated.project_id] = (tasksByProject[updated.project_id] || []).map(t => t.id === updated.id ? updated : t);
-		tasksByProject = { ...tasksByProject };
-	}
-
-	function onTaskDelete(id: string) {
-		for (const pid of Object.keys(tasksByProject)) {
-			tasksByProject[pid] = tasksByProject[pid].filter(t => t.id !== id);
-		}
-		tasksByProject = { ...tasksByProject };
-		selectedTask = null;
-	}
+	function onTaskUpdate() { store.refreshTasks(); }
+	function onTaskDelete() { selectedTask = null; store.refreshTasks(); }
 
 	async function updateProjectAppearance(id: string, color: string | null, icon: string | null) {
-		await api.updateProject(id, { color, icon } as any);
-		projects = projects.map(p => p.id === id ? { ...p, color, icon } : p);
+		await store.updateProject(id, { color, icon } as any);
 	}
 
 	function projectStats(pid: string) {
-		const tasks = tasksByProject[pid] || [];
+		const tasks = store.tasksForProject(pid);
 		const done = tasks.filter(t => t.is_done).length;
 		return { total: tasks.length, done };
 	}
@@ -84,7 +52,7 @@
 	}
 </script>
 
-{#if loading}
+{#if !store.initialized}
 	<div class="flex items-center justify-center h-full">
 		<div class="w-5 h-5 border-2 border-text-muted/30 border-t-text-muted rounded-full animate-spin"></div>
 	</div>
@@ -111,9 +79,9 @@
 
 				{#if children.length === 0}
 					<!-- Standalone project: show tasks -->
-					{#if (tasksByProject[grp.id] || []).length > 0}
+					{#if (store.tasksForProject(grp.id)).length > 0}
 						<div class="divide-y divide-border/50">
-							{#each (tasksByProject[grp.id] || []) as task (task.id)}
+							{#each (store.tasksForProject(grp.id)) as task (task.id)}
 								{@render taskRow(task)}
 							{/each}
 						</div>
@@ -131,9 +99,9 @@
 									<span class="text-[10px] text-text-muted ml-auto">{cStats.done}/{cStats.total}</span>
 								{/if}
 							</div>
-							{#if (tasksByProject[child.id] || []).length > 0}
+							{#if (store.tasksForProject(child.id)).length > 0}
 								<div class="divide-y divide-border/50">
-									{#each (tasksByProject[child.id] || []) as task (task.id)}
+									{#each (store.tasksForProject(child.id)) as task (task.id)}
 										{@render taskRowIndented(task)}
 									{/each}
 								</div>

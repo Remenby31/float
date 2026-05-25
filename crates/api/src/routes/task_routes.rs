@@ -126,6 +126,7 @@ async fn create(
         updated_at: Set(now.into()),
     };
     let task = new.insert(&state.db).await?;
+    state.emit("task", "created", &task.id.to_string(), &auth.user_id.to_string());
     Ok(Json(task))
 }
 
@@ -169,6 +170,7 @@ async fn update(
     active.updated_at = Set(chrono::Utc::now().into());
 
     let updated = active.update(&state.db).await?;
+    state.emit("task", "updated", &updated.id.to_string(), &auth.user_id.to_string());
     Ok(Json(updated))
 }
 
@@ -187,6 +189,7 @@ async fn delete(
     if result.rows_affected == 0 {
         return Err(AppError::NotFound);
     }
+    state.emit("task", "deleted", &id.to_string(), &auth.user_id.to_string());
     Ok(Json(serde_json::json!({ "deleted": true })))
 }
 

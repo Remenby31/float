@@ -2,28 +2,29 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api, type Project } from '$lib/api';
+	import { api } from '$lib/api';
 	import { getTheme } from '$lib/theme.svelte';
 	import { setupKeyboard, onShortcut } from '$lib/keyboard';
+	import { getDataStore } from '$lib/stores/data.svelte';
+	import { startSync } from '$lib/stores/sync';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
 	import { onDestroy } from 'svelte';
 
 	let { children } = $props();
-	let projects = $state<Project[]>([]);
+	const store = getDataStore();
 	let cmdOpen = $state(false);
 	let profileOpen = $state(false);
 	let unsubs: (() => void)[] = [];
 	let username = $state('');
 	let initials = $state('');
 	let newTitle = $state('');
-	let adding = $state<false | string | 'root'>(false); // false, 'root', or parent_id
+	let adding = $state<false | string | 'root'>(false);
 	let collapsed = $state<Set<string>>(new Set());
 	const theme = getTheme();
 
-	// Derived: groups (top-level) and their projects (children)
-	let parentProjects = $derived(projects.filter(p => !p.parent_id));
-	let childrenOf = $derived((parentId: string) => projects.filter(p => p.parent_id === parentId));
+	let parentProjects = $derived(store.projects.filter(p => !p.parent_id));
+	let childrenOf = $derived((parentId: string) => store.projects.filter(p => p.parent_id === parentId));
 
 	onDestroy(() => { unsubs.forEach(u => u()); });
 
@@ -35,7 +36,8 @@
 			const user = await api.me();
 			username = user.username;
 			initials = user.username.slice(0, 1).toUpperCase();
-			projects = await api.listProjects();
+			await store.init();
+			unsubs.push(startSync(store));
 		} catch {
 			goto('/login');
 		}
@@ -44,11 +46,9 @@
 	async function addProject() {
 		if (!newTitle.trim()) return;
 		const parentId = (adding !== false && adding !== 'root') ? adding : undefined;
-		const p = await api.createProject({ title: newTitle.trim(), parent_id: parentId });
-		projects = [...projects, p];
+		const p = await store.addProject({ title: newTitle.trim(), parent_id: parentId });
 		newTitle = '';
 		adding = false;
-		// Expand group if adding project inside
 		if (parentId) collapsed.delete(parentId);
 		goto(`/app/project/${p.id}`);
 	}
@@ -56,54 +56,45 @@
 	let confirmDelete = $state<{ id: string; title: string; hasTasks: boolean } | null>(null);
 
 	async function askDeleteProject(id: string) {
-		const proj = projects.find(p => p.id === id);
+		const proj = store.projects.find(p => p.id === id);
 		if (!proj) return;
-		// Check if this has tasks (or its projects do)
 		try {
-			const tasks = await api.listTasks(id);
-			const children = projects.filter(p => p.parent_id === id);
-			let childTasks = 0;
-			for (const c of children) {
-				const ct = await api.listTasks(c.id);
-				childTasks += ct.length;
-			}
-			const total = tasks.length + childTasks;
+			const tasks = store.allTasks.filter(t => t.project_id === id);
+			const children = store.projects.filter(p => p.parent_id === id);
+			const childTasks = store.allTasks.filter(t => children.some(c => c.id === t.project_id));
+			const total = tasks.length + childTasks.length;
 			if (total > 0 || children.length > 0) {
 				confirmDelete = { id, title: proj.title, hasTasks: total > 0 };
 				return;
 			}
-		} catch { /* empty project, proceed */ }
+		} catch {}
 		await doDeleteProject(id);
 	}
 
 	async function doDeleteProject(id: string) {
 		confirmDelete = null;
-		await api.deleteProject(id);
-		projects = projects.filter(p => p.id !== id && p.parent_id !== id);
+		await store.deleteProject(id);
 		if (page.url.pathname === `/app/project/${id}`) goto('/app');
 	}
 
 	function toggleCollapse(id: string) {
-		if (collapsed.has(id)) {
-			collapsed.delete(id);
-		} else {
-			collapsed.add(id);
-		}
-		collapsed = new Set(collapsed); // trigger reactivity
+		if (collapsed.has(id)) collapsed.delete(id);
+		else collapsed.add(id);
+		collapsed = new Set(collapsed);
 	}
 
-	function startAdding(target: 'root' | number) {
+	function startAdding(target: 'root' | string) {
 		adding = target;
 		newTitle = '';
 	}
 
 	async function updateProjectAppearance(id: string, color: string | null, icon: string | null) {
-		await api.updateProject(id, { color, icon } as any);
-		projects = projects.map(p => p.id === id ? { ...p, color, icon } : p);
+		await store.updateProject(id, { color, icon } as any);
 	}
 
 	function logout() {
 		localStorage.removeItem('float_token');
+		store.reset();
 		goto('/login');
 	}
 </script>
@@ -332,4 +323,4 @@
 	</div>
 {/if}
 
-<CommandPalette bind:open={cmdOpen} {projects} />
+<CommandPalette bind:open={cmdOpen} />

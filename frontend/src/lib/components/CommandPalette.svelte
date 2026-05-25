@@ -1,20 +1,19 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { api, type Project, type Task } from '$lib/api';
+	import { getDataStore } from '$lib/stores/data.svelte';
 
 	let {
 		open = $bindable(false),
-		projects = [],
 	}: {
 		open: boolean;
-		projects: Project[];
 	} = $props();
 
+	const store = getDataStore();
+
 	let query = $state('');
-	let allTasks = $state<Task[]>([]);
 	let selectedIdx = $state(0);
 	let inputEl: HTMLInputElement;
-	let loaded = $state(false);
 
 	// Step 2: picking a project for new task
 	let creatingTask = $state('');
@@ -23,9 +22,6 @@
 	let projectInputEl: HTMLInputElement;
 
 	$effect(() => {
-		if (open && !loaded) {
-			api.listAllTasks().then(t => { allTasks = t; loaded = true; });
-		}
 		if (open) {
 			query = '';
 			creatingTask = '';
@@ -34,8 +30,7 @@
 			projectIdx = 0;
 			setTimeout(() => inputEl?.focus(), 50);
 		}
-		if (!open) { loaded = false; }
-	});
+			});
 
 	function matches(text: string, q: string): boolean {
 		const lower = text.toLowerCase();
@@ -61,12 +56,12 @@
 		const q = query.trim();
 		if (!q) return [];
 		const items: Result[] = [];
-		for (const p of projects) {
+		for (const p of store.projects) {
 			if (matches(p.title, q)) items.push({ type: 'project', id: p.id, title: p.title });
 		}
-		for (const t of allTasks) {
+		for (const t of store.allTasks) {
 			if (matches(t.title, q) || (t.description && matches(t.description, q))) {
-				const proj = projects.find(p => p.id === t.project_id);
+				const proj = store.projects.find(p => p.id === t.project_id);
 				items.push({ type: 'task', id: t.id, title: t.title, projectId: t.project_id, projectName: proj?.title, isDone: t.is_done });
 			}
 		}
@@ -78,9 +73,9 @@
 
 	// Leaf projects only (no children = can hold tasks)
 	let leafProjects = $derived.by(() => {
-		const parentIds = new Set(projects.filter(p => p.parent_id).map(p => p.parent_id));
+		const parentIds = new Set(store.projects.filter(p => p.parent_id).map(p => p.parent_id));
 		const q = projectQuery.trim().toLowerCase();
-		return projects
+		return store.projects
 			.filter(p => !parentIds.has(p.id))
 			.filter(p => !q || matches(p.title, q));
 	});
@@ -100,10 +95,7 @@
 	}
 
 	async function createInProject(projectId: string) {
-		await api.createTask(projectId, { title: creatingTask });
-		// Reload tasks
-		allTasks = await api.listAllTasks();
-		// Navigate to the project
+		await store.addTask(projectId, { title: creatingTask });
 		goto(`/app/project/${projectId}`);
 		open = false;
 	}
@@ -137,7 +129,7 @@
 
 	function parentName(p: Project): string | null {
 		if (!p.parent_id) return null;
-		return projects.find(pp => pp.id === p.parent_id)?.title || null;
+		return store.projects.find(pp => pp.id === p.parent_id)?.title || null;
 	}
 </script>
 
@@ -237,7 +229,7 @@
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<div class="px-3 py-0.5" onclick={() => navigate(r)}>
 									<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors {flatIndex(r) === selectedIdx ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}">
-										<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{projects.find(p => p.id === r.id)?.color || '#525252'}"></span>
+										<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{store.projects.find(p => p.id === r.id)?.color || '#525252'}"></span>
 										<span class="text-sm truncate">{r.title}</span>
 										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-auto text-text-muted flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
 									</div>

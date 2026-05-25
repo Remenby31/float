@@ -102,9 +102,11 @@ async fn create(
                 .col_expr(task::Column::ProjectId, sea_orm::sea_query::Expr::value(project.id))
                 .exec(&state.db)
                 .await?;
+            state.emit("task", "updated", &pid.to_string(), &auth.user_id.to_string());
         }
     }
 
+    state.emit("project", "created", &project.id.to_string(), &auth.user_id.to_string());
     Ok(Json(project))
 }
 
@@ -143,6 +145,7 @@ async fn update(
     active.updated_at = Set(chrono::Utc::now().into());
 
     let updated = active.update(&state.db).await?;
+    state.emit("project", "updated", &updated.id.to_string(), &auth.user_id.to_string());
     Ok(Json(updated))
 }
 
@@ -160,5 +163,6 @@ async fn delete(
     if result.rows_affected == 0 {
         return Err(AppError::NotFound);
     }
+    state.emit("project", "deleted", &id.to_string(), &auth.user_id.to_string());
     Ok(Json(serde_json::json!({ "deleted": true })))
 }
