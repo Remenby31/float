@@ -1,10 +1,19 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', 'JetBrains Mono', 'SF Mono', monospace;
+/* Geist Sans */
+@font-face { font-family: 'Geist'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/Geist-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/Geist-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/Geist-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Geist'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/Geist-Bold.woff2') format('woff2'); }
 
-  /* Dark mode (default) */
+/* Geist Mono */
+@font-face { font-family: 'Geist Mono'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Geist Mono'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/GeistMono-Medium.woff2') format('woff2'); }
+
+@theme {
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', monospace;
+
   --color-bg: #0A0A0A;
   --color-surface: #171717;
   --color-elevated: #1C1C1C;
@@ -25,10 +34,8 @@
   --color-warning: #EAB308;
   --color-danger: #EF4444;
   --color-info: #3B82F6;
-
 }
 
-/* Base */
 html {
   background: var(--color-bg);
   color: var(--color-text);
@@ -41,7 +48,6 @@ html {
   transition-timing-function: ease;
 }
 
-/* Light mode override */
 html.light {
   --color-bg: #FFFFFF;
   --color-surface: #F5F5F5;
@@ -58,7 +64,6 @@ html.light {
 
   --color-accent: #171717;
   --color-accent-fg: #FFFFFF;
-
 }
 
 @media (prefers-reduced-motion: reduce) {
