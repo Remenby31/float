@@ -185,9 +185,6 @@
 				<div class="px-4 py-3 bg-surface/30 flex items-center gap-3">
 					<ColorPicker color={grp.color} icon={grp.icon} onchange={(c, i) => updateProjectAppearance(grp.id, c, i)} />
 					<a href="/app/project/{grp.id}" class="text-sm font-medium hover:text-text-secondary transition-colors">{grp.title}</a>
-					{#if stats.total > 0}
-						<span class="text-[10px] text-text-muted ml-auto">{stats.done}/{stats.total}</span>
-					{/if}
 				</div>
 
 				{#if children.length === 0}
@@ -208,9 +205,6 @@
 							<div class="px-4 py-2 bg-surface/15 flex items-center gap-2.5 pl-6">
 								<ColorPicker color={child.color || grp.color} icon={child.icon} onchange={(c, i) => updateProjectAppearance(child.id, c, i)} />
 								<a href="/app/project/{child.id}" class="text-xs font-medium text-text-secondary hover:text-text transition-colors">{child.title}</a>
-								{#if cStats.total > 0}
-									<span class="text-[10px] text-text-muted ml-auto">{cStats.done}/{cStats.total}</span>
-								{/if}
 							</div>
 							{#if (store.tasksForProject(child.id)).length > 0}
 								<div class="divide-y divide-border/50">
