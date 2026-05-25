@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { api, type Task, type Project } from '$lib/api';
+	import { relativeDate } from '$lib/utils';
 	import type { ParsedTask } from '$lib/smart-input';
 	import TaskDetail from '$lib/components/TaskDetail.svelte';
 	import SmartInput from '$lib/components/SmartInput.svelte';
@@ -62,17 +63,7 @@
 
 
 
-	function relativeDate(d: string | null) {
-		if (!d) return '';
-		const date = new Date(d);
-		const now = new Date();
-		const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-		if (diff === 0) return 'today';
-		if (diff === 1) return 'tomorrow';
-		if (diff === -1) return 'yesterday';
-		if (diff > 0 && diff < 7) return date.toLocaleDateString('en', { weekday: 'short' });
-		return date.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-	}
+
 
 	function onTaskUpdate(updated: Task) {
 		tasks = tasks.map(t => t.id === updated.id ? updated : t);
