@@ -164,7 +164,7 @@
 						<input
 							bind:this={projectInputEl}
 							bind:value={projectQuery}
-							placeholder="which project?"
+							placeholder="which project? type to filter..."
 							class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/60 focus:outline-none"
 						/>
 						<kbd class="text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
@@ -187,7 +187,7 @@
 					{/each}
 					{#if leafProjects.length === 0}
 						<div class="px-4 py-6 text-center">
-							<p class="text-sm text-text-muted">no matching project</p>
+							<p class="text-sm text-text-muted">no match</p>
 						</div>
 					{/if}
 					<div class="h-1"></div>

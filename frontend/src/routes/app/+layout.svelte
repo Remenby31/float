@@ -21,7 +21,7 @@
 	let collapsed = $state<Set<string>>(new Set());
 	const theme = getTheme();
 
-	// Derived: parent projects (no parent_id) and children grouped
+	// Derived: groups (top-level) and their projects (children)
 	let parentProjects = $derived(projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((parentId: string) => projects.filter(p => p.parent_id === parentId));
 
@@ -48,7 +48,7 @@
 		projects = [...projects, p];
 		newTitle = '';
 		adding = false;
-		// Expand parent if adding sub-project
+		// Expand group if adding project inside
 		if (parentId) collapsed.delete(parentId);
 		goto(`/app/project/${p.id}`);
 	}
@@ -58,7 +58,7 @@
 	async function askDeleteProject(id: string) {
 		const proj = projects.find(p => p.id === id);
 		if (!proj) return;
-		// Check if project or its children have tasks
+		// Check if this has tasks (or its projects do)
 		try {
 			const tasks = await api.listTasks(id);
 			const children = projects.filter(p => p.parent_id === id);
@@ -131,36 +131,43 @@
 			</button>
 
 			<div class="h-1"></div>
-			<p class="text-[10px] font-semibold uppercase tracking-widest text-text-muted px-2 pt-1 pb-2">projects</p>
-
-			{#each parentProjects as project}
-				{@const active = page.url.pathname === `/app/project/${project.id}`}
-				{@const children = childrenOf(project.id)}
+			{#each parentProjects as grp}
+				{@const children = childrenOf(grp.id)}
 				{@const hasChildren = children.length > 0}
-				{@const isCollapsed = collapsed.has(project.id)}
+				{@const isCollapsed = collapsed.has(grp.id)}
 
-				<!-- Parent project -->
-				<div class="group relative">
+				<!-- Group header -->
+				<div class="group relative mt-3 first:mt-0">
 					<div class="flex items-center">
-						<a
-							href="/app/project/{project.id}"
-							class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all {active ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}"
-						>
-							<ColorPicker value={project.color} onchange={(c) => updateProjectColor(project.id, c)} />
-							<span class="truncate">{project.title}</span>
-						</a>
+						{#if hasChildren}
+							<!-- Group: show as label, not clickable as project -->
+							<div class="flex-1 flex items-center gap-2 px-2 py-1">
+								<ColorPicker value={grp.color} onchange={(c) => updateProjectColor(grp.id, c)} />
+								<span class="text-[10px] font-semibold uppercase tracking-widest text-text-muted truncate">{grp.title}</span>
+							</div>
+						{:else}
+							<!-- Standalone project (no children = project, not group) -->
+							{@const active = page.url.pathname === `/app/project/${grp.id}`}
+							<a
+								href="/app/project/{grp.id}"
+								class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all {active ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}"
+							>
+								<ColorPicker value={grp.color} onchange={(c) => updateProjectColor(grp.id, c)} />
+								<span class="truncate">{grp.title}</span>
+							</a>
+						{/if}
 						<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
 							<button
 								type="button"
-								onclick={() => startAdding(project.id)}
+								onclick={() => startAdding(grp.id)}
 								class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary rounded transition-colors"
-								title="add sub-project"
+								title="add project"
 							>
 								<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 							</button>
 							<button
 								type="button"
-								onclick={() => askDeleteProject(project.id)}
+								onclick={() => askDeleteProject(grp.id)}
 								class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-danger rounded transition-colors"
 								title="delete"
 							>
@@ -170,7 +177,7 @@
 					</div>
 				</div>
 
-				<!-- Sub-projects -->
+				<!-- Projects in group -->
 				{#if !isCollapsed}
 					{#each children as child}
 						{@const childActive = page.url.pathname === `/app/project/${child.id}`}
@@ -181,7 +188,7 @@
 									href="/app/project/{child.id}"
 									class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all {childActive ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}"
 								>
-									<ColorPicker value={child.color || project.color} onchange={(c) => updateProjectColor(child.id, c)} />
+									<ColorPicker value={child.color || grp.color} onchange={(c) => updateProjectColor(child.id, c)} />
 									<span class="truncate">{child.title}</span>
 								</a>
 								<button
@@ -196,13 +203,13 @@
 						</div>
 					{/each}
 
-					<!-- Inline add sub-project -->
-					{#if adding === project.id}
+					<!-- Inline add project in group -->
+					{#if adding === grp.id}
 						<div class="pl-4">
 							<form onsubmit={(e) => { e.preventDefault(); addProject(); }} class="px-1 pt-0.5">
 								<input
 									bind:value={newTitle}
-									placeholder="sub-project name"
+									placeholder="project name"
 									autofocus
 									class="w-full bg-surface border border-border rounded-lg px-2 py-1 text-[13px] text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-text/10 focus:border-border-strong transition-all"
 									onblur={() => { if (!newTitle) adding = false; }}
@@ -214,12 +221,12 @@
 				{/if}
 			{/each}
 
-			<!-- Add root project -->
+			<!-- Add new group -->
 			{#if adding === 'root'}
 				<form onsubmit={(e) => { e.preventDefault(); addProject(); }} class="px-1 pt-1">
 					<input
 						bind:value={newTitle}
-						placeholder="project name"
+						placeholder="group name"
 						autofocus
 						class="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-text/10 focus:border-border-strong transition-all"
 						onblur={() => { if (!newTitle) adding = false; }}
@@ -233,7 +240,7 @@
 					class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm text-text-muted hover:text-text-secondary hover:bg-surface/50 transition-all w-full"
 				>
 					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-					new project
+					new group
 				</button>
 			{/if}
 		</nav>
@@ -304,9 +311,9 @@
 			<h3 class="text-sm font-medium mb-2">delete "{confirmDelete.title}"?</h3>
 			<p class="text-xs text-text-muted mb-4">
 				{#if confirmDelete.hasTasks}
-					this project contains tasks that will be permanently deleted.
+					this contains tasks that will be permanently deleted.
 				{:else}
-					this project and its sub-projects will be permanently deleted.
+					this will be permanently deleted.
 				{/if}
 			</p>
 			<div class="flex gap-2 justify-end">

@@ -13,7 +13,7 @@
 	let addingTo = $state<string | null>(null);
 	let addInput = $state('');
 
-	// Derived: parent projects and children
+	// Derived: groups and projects
 	let parentProjects = $derived(projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => projects.filter(p => p.parent_id === pid));
 
@@ -120,7 +120,7 @@
 				</div>
 
 				{#if children.length === 0}
-					<!-- No sub-projects: show parent tasks + add row -->
+					<!-- Standalone project (no children): show tasks -->
 					{#if (tasksByProject[parent.id] || []).length > 0}
 						<div class="divide-y divide-border/50">
 							{#each (tasksByProject[parent.id] || []) as task (task.id)}
@@ -159,7 +159,7 @@
 						/>
 					</div>
 				{:else}
-					<!-- Has sub-projects: show each sub-project with its tasks -->
+					<!-- Group: show each project with its tasks -->
 					{#each children as child}
 						<div class="border-t border-border">
 							<div class="px-4 py-2 bg-surface/15 flex items-center gap-2.5 pl-6">
@@ -196,7 +196,7 @@
 									{/each}
 								</div>
 							{/if}
-							<!-- Inline add for sub-project -->
+							<!-- Inline add -->
 							<div class="flex items-center gap-3 px-4 py-1.5 pl-6 border-t border-border/30">
 								<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-30"></div>
 								<input

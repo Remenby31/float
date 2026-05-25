@@ -1,7 +1,7 @@
 <div class="flex items-center justify-center h-screen">
 	<div class="text-center">
 		<div class="floating-sphere mx-auto mb-6"></div>
-		<p class="text-sm text-text-secondary">select a project or create one</p>
+		<p class="text-sm text-text-secondary">select a project or create a group</p>
 	</div>
 </div>
 

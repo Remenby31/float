@@ -31,7 +31,7 @@ No gamification, no streaks, no guilt. Add tasks, knock them out, reach zero.
 ## Features
 
 - **Smart input** — type `buy milk @tomorrow @15h` and the date is parsed automatically
-- **Sub-projects** — one level of nesting, tasks belong to leaves only
+- **Groups & projects** — organize projects into groups, tasks belong to projects
 - **Overview** — all projects side by side, add and complete tasks inline
 - **Command palette** — `Cmd+K` to search everything instantly
 - **Dark / light** — system-aware, one-click toggle
