@@ -2,7 +2,7 @@
   <img src="frontend/static/favicon.svg" width="64" height="64" alt="float">
 </p>
 
-<h1 align="center">float</h1>
+<h1 align="center">Float</h1>
 
 <p align="center">
   <strong>A personal task manager where the goal is to empty the bucket. When everything's done, you float.</strong>
