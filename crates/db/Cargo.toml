@@ -1,0 +1,11 @@
+[package]
+name = "float-db"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+float-core = { path = "../core" }
+sea-orm = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }

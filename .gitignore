@@ -1,0 +1,10 @@
+target/
+node_modules/
+.env
+*.swp
+.DS_Store
+frontend/build/
+frontend/.svelte-kit/
+*.log
+.claude/
+.playwright-cli/

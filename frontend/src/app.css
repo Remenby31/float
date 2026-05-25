@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'SF Mono', monospace;
+
+  /* Dark mode (default) */
+  --color-bg: #0A0A0A;
+  --color-surface: #171717;
+  --color-elevated: #1C1C1C;
+  --color-tertiary: #262626;
+
+  --color-text: #FAFAFA;
+  --color-text-secondary: #A3A3A3;
+  --color-text-muted: #525252;
+
+  --color-border: #262626;
+  --color-border-subtle: #1C1C1C;
+  --color-border-strong: #404040;
+
+  --color-accent: #FAFAFA;
+  --color-accent-fg: #0A0A0A;
+
+  --color-success: #22C55E;
+  --color-warning: #EAB308;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
+
+}
+
+/* Base */
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+* {
+  transition-property: background-color, border-color, color, opacity, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Light mode override */
+html.light {
+  --color-bg: #FFFFFF;
+  --color-surface: #F5F5F5;
+  --color-elevated: #FFFFFF;
+  --color-tertiary: #EDEDED;
+
+  --color-text: #171717;
+  --color-text-secondary: #525252;
+  --color-text-muted: #A3A3A3;
+
+  --color-border: #E5E5E5;
+  --color-border-subtle: #F0F0F0;
+  --color-border-strong: #D4D4D4;
+
+  --color-accent: #171717;
+  --color-accent-fg: #FFFFFF;
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
