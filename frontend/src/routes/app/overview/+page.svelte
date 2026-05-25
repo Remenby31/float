@@ -112,7 +112,11 @@
 			<section class="border border-border rounded-xl overflow-hidden">
 				<!-- Project header -->
 				<div class="px-4 py-3 bg-surface/30 flex items-center gap-3">
-					<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{parent.color || '#525252'}"></span>
+					{#if parent.icon}
+						<span class="text-sm">{parent.icon}</span>
+					{:else}
+						<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{parent.color || '#525252'}"></span>
+					{/if}
 					<a href="/app/project/{parent.id}" class="text-sm font-medium hover:text-text-secondary transition-colors">{parent.title}</a>
 					{#if stats.total > 0}
 						<span class="text-[10px] text-text-muted ml-auto">{stats.done}/{stats.total}</span>
@@ -163,7 +167,11 @@
 					{#each children as child}
 						<div class="border-t border-border">
 							<div class="px-4 py-2 bg-surface/15 flex items-center gap-2.5 pl-6">
+								{#if child.icon}
+								<span class="text-xs">{child.icon}</span>
+							{:else}
 								<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{child.color || parent.color || '#525252'}"></span>
+							{/if}
 								<a href="/app/project/{child.id}" class="text-xs font-medium text-text-secondary hover:text-text transition-colors">{child.title}</a>
 								{#if projectStats(child.id).total > 0}
 									<span class="text-[10px] text-text-muted ml-auto">{projectStats(child.id).done}/{projectStats(child.id).total}</span>

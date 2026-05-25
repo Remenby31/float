@@ -21,6 +21,7 @@ struct CreateProject {
     title: String,
     description: Option<String>,
     color: Option<String>,
+    icon: Option<String>,
     parent_id: Option<Uuid>,
 }
 
@@ -29,6 +30,7 @@ struct UpdateProject {
     title: Option<String>,
     description: Option<Option<String>>,
     color: Option<Option<String>>,
+    icon: Option<Option<String>>,
     is_archived: Option<bool>,
     position: Option<i32>,
 }
@@ -79,6 +81,7 @@ async fn create(
         title: Set(input.title),
         description: Set(input.description),
         color: Set(input.color),
+        icon: Set(input.icon),
         parent_id: Set(input.parent_id),
         is_archived: Set(false),
         position: Set(max_pos + 1),
@@ -134,6 +137,7 @@ async fn update(
     if let Some(title) = input.title { active.title = Set(title); }
     if let Some(desc) = input.description { active.description = Set(desc); }
     if let Some(color) = input.color { active.color = Set(color); }
+    if let Some(icon) = input.icon { active.icon = Set(icon); }
     if let Some(archived) = input.is_archived { active.is_archived = Set(archived); }
     if let Some(pos) = input.position { active.position = Set(pos); }
     active.updated_at = Set(chrono::Utc::now().into());

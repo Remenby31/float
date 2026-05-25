@@ -10,6 +10,7 @@ pub struct Model {
     pub title: String,
     pub description: Option<String>,
     pub color: Option<String>,
+    pub icon: Option<String>,
     pub parent_id: Option<Uuid>,
     pub is_archived: bool,
     pub position: i32,

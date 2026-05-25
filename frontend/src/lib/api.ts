@@ -90,6 +90,7 @@ export interface Project {
 	title: string;
 	description: string | null;
 	color: string | null;
+	icon: string | null;
 	parent_id: string | null;
 	is_archived: boolean;
 	position: number;

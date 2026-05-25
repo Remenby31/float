@@ -97,9 +97,9 @@
 		newTitle = '';
 	}
 
-	async function updateProjectColor(id: string, color: string) {
-		await api.updateProject(id, { color });
-		projects = projects.map(p => p.id === id ? { ...p, color } : p);
+	async function updateProjectAppearance(id: string, color: string | null, icon: string | null) {
+		await api.updateProject(id, { color, icon } as any);
+		projects = projects.map(p => p.id === id ? { ...p, color, icon } : p);
 	}
 
 	function logout() {
@@ -142,7 +142,7 @@
 						{#if hasChildren}
 							<!-- Group: show as label, not clickable as project -->
 							<div class="flex-1 flex items-center gap-2 px-2 py-1">
-								<ColorPicker value={grp.color} onchange={(c) => updateProjectColor(grp.id, c)} />
+								<ColorPicker color={grp.color} icon={grp.icon} onchange={(c, i) => updateProjectAppearance(grp.id, c, i)} />
 								<span class="text-[10px] font-semibold uppercase tracking-widest text-text-muted truncate">{grp.title}</span>
 							</div>
 						{:else}
@@ -152,7 +152,7 @@
 								href="/app/project/{grp.id}"
 								class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all {active ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}"
 							>
-								<ColorPicker value={grp.color} onchange={(c) => updateProjectColor(grp.id, c)} />
+								<ColorPicker color={grp.color} icon={grp.icon} onchange={(c, i) => updateProjectAppearance(grp.id, c, i)} />
 								<span class="truncate">{grp.title}</span>
 							</a>
 						{/if}
@@ -188,7 +188,7 @@
 									href="/app/project/{child.id}"
 									class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all {childActive ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}"
 								>
-									<ColorPicker value={child.color || grp.color} onchange={(c) => updateProjectColor(child.id, c)} />
+									<ColorPicker color={child.color || grp.color} icon={child.icon} onchange={(c, i) => updateProjectAppearance(child.id, c, i)} />
 									<span class="truncate">{child.title}</span>
 								</a>
 								<button
