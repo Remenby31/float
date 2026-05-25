@@ -134,8 +134,7 @@
 								<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{section.accent}"></span>
 							{/if}
 							<span class="text-xs font-semibold uppercase tracking-wider {section.label === 'overdue' ? 'text-danger' : 'text-text-muted'}">{section.label}</span>
-							<span class="text-[10px] text-text-muted ml-auto">{section.items.length}</span>
-							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-text-muted transition-transform group-open/section:rotate-90 flex-shrink-0"><polyline points="9 6 15 12 9 18"/></svg>
+							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ml-auto text-text-muted transition-transform group-open/section:rotate-90 flex-shrink-0"><polyline points="9 6 15 12 9 18"/></svg>
 						</summary>
 						<div class="divide-y divide-border/30">
 							{#each section.items as dt}
