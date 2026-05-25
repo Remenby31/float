@@ -13,6 +13,61 @@
 	let groups = $derived(store.projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
 
+	// Temporal view: group dated tasks by time bucket
+	interface DatedTask { task: Task; projectName: string; projectColor: string | null; projectIcon: string | null; }
+
+	function startOfDay(d: Date): Date { const r = new Date(d); r.setHours(0,0,0,0); return r; }
+
+	let datedTasks = $derived.by(() => {
+		const now = startOfDay(new Date());
+		const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+		const endOfWeek = new Date(now); endOfWeek.setDate(endOfWeek.getDate() + (7 - now.getDay()));
+
+		const overdue: DatedTask[] = [];
+		const today: DatedTask[] = [];
+		const tomorrowList: DatedTask[] = [];
+		const thisWeek: DatedTask[] = [];
+		const later: DatedTask[] = [];
+
+		for (const t of store.allTasks) {
+			if (t.is_done || !t.due_date) continue;
+			const proj = store.projects.find(p => p.id === t.project_id);
+			const parent = proj?.parent_id ? store.projects.find(p => p.id === proj.parent_id) : null;
+			const dt: DatedTask = {
+				task: t,
+				projectName: proj?.title || '',
+				projectColor: proj?.color || parent?.color || null,
+				projectIcon: proj?.icon || null,
+			};
+			const due = startOfDay(new Date(t.due_date));
+			if (due < now) overdue.push(dt);
+			else if (due.getTime() === now.getTime()) today.push(dt);
+			else if (due.getTime() === tomorrow.getTime()) tomorrowList.push(dt);
+			else if (due <= endOfWeek) thisWeek.push(dt);
+			else later.push(dt);
+		}
+
+		return { overdue, today, tomorrow: tomorrowList, thisWeek, later };
+	});
+
+	let hasDatedTasks = $derived(
+		datedTasks.overdue.length + datedTasks.today.length + datedTasks.tomorrow.length +
+		datedTasks.thisWeek.length + datedTasks.later.length > 0
+	);
+
+	function dayLabel(d: string): string {
+		const date = new Date(d);
+		return date.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
+	}
+
+	function timeLabel(d: string): string {
+		const date = new Date(d);
+		const h = date.getHours();
+		const m = date.getMinutes();
+		if (!h && !m) return '';
+		return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+	}
+
 	async function toggleDone(task: Task) {
 		await store.updateTask(task.project_id, task.id, { is_done: !task.is_done });
 	}
@@ -61,6 +116,64 @@
 	<div class="mb-6">
 		<h1 class="text-lg font-semibold tracking-tight">overview</h1>
 	</div>
+
+	<!-- Temporal view -->
+	{#if hasDatedTasks}
+		<div class="mb-8 border border-border rounded-xl overflow-hidden">
+			{#each [
+				{ label: 'overdue', items: datedTasks.overdue, accent: 'var(--color-danger)', open: true },
+				{ label: 'today', items: datedTasks.today, accent: 'var(--color-text)', open: true },
+				{ label: 'tomorrow', items: datedTasks.tomorrow, accent: null, open: true },
+				{ label: 'this week', items: datedTasks.thisWeek, accent: null, open: false },
+				{ label: 'later', items: datedTasks.later, accent: null, open: false },
+			] as section}
+				{#if section.items.length > 0}
+					<details open={section.open} class="group/section border-b border-border/50 last:border-b-0">
+						<summary class="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none hover:bg-surface/30 transition-colors">
+							{#if section.accent}
+								<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{section.accent}"></span>
+							{/if}
+							<span class="text-xs font-semibold uppercase tracking-wider {section.label === 'overdue' ? 'text-danger' : 'text-text-muted'}">{section.label}</span>
+							<span class="text-[10px] text-text-muted ml-auto">{section.items.length}</span>
+							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-text-muted transition-transform group-open/section:rotate-90 flex-shrink-0"><polyline points="9 6 15 12 9 18"/></svg>
+						</summary>
+						<div class="divide-y divide-border/30">
+							{#each section.items as dt}
+								<div class="flex items-center gap-3 px-4 py-2 hover:bg-surface/30 transition-colors group">
+									<button
+										type="button"
+										onclick={() => toggleDone(dt.task)}
+										class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
+										style="border-color:{section.label === 'overdue' ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
+									></button>
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<span
+										class="flex-1 text-sm cursor-pointer hover:text-text-secondary transition-colors truncate"
+										onclick={() => openTask(dt.task)}
+									>{dt.task.title}</span>
+									{#if timeLabel(dt.task.due_date!)}
+										<span class="text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
+									{/if}
+									{#if section.label !== 'today' && section.label !== 'overdue' && section.label !== 'tomorrow'}
+										<span class="text-[10px] text-text-muted flex-shrink-0 w-16 text-right">{dayLabel(dt.task.due_date!)}</span>
+									{/if}
+									<span class="flex items-center gap-1 flex-shrink-0 ml-1">
+										{#if dt.projectIcon}
+											<span class="text-[11px]">{dt.projectIcon}</span>
+										{:else}
+											<span class="w-1.5 h-1.5 rounded-full" style="background:{dt.projectColor || '#525252'}"></span>
+										{/if}
+										<span class="text-[10px] text-text-muted max-w-[80px] truncate">{dt.projectName}</span>
+									</span>
+								</div>
+							{/each}
+						</div>
+					</details>
+				{/if}
+			{/each}
+		</div>
+	{/if}
 
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
 		{#each groups as grp}
