@@ -2,6 +2,14 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
+		<script>
+			(function() {
+				var t = localStorage.getItem('float_theme');
+				if (t === 'light' || (!t && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+					document.documentElement.classList.add('light');
+				}
+			})();
+		</script>
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" sizes="32x32" type="image/png" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
