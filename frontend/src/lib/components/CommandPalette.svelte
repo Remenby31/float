@@ -159,7 +159,7 @@
 							placeholder="which project? type to filter..."
 							class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/60 focus:outline-none"
 						/>
-						<kbd class="text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
+						<kbd class="hidden md:inline text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
 					</div>
 				</div>
 
@@ -185,7 +185,7 @@
 					<div class="h-1"></div>
 				</div>
 
-				<div class="px-4 py-2 border-t border-border flex items-center gap-4 text-[10px] text-text-muted">
+				<div class="hidden md:flex px-4 py-2 border-t border-border items-center gap-4 text-[10px] text-text-muted">
 					<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↑↓</kbd> select</span>
 					<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↵</kbd> create</span>
 					<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">esc</kbd> back</span>
@@ -203,7 +203,7 @@
 						placeholder="search or create a task..."
 						class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/60 focus:outline-none"
 					/>
-					<kbd class="text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
+					<kbd class="hidden md:inline text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
 				</div>
 
 				<div class="max-h-[50vh] overflow-y-auto">
@@ -279,7 +279,7 @@
 				</div>
 
 				{#if results.length > 0}
-					<div class="px-4 py-2 border-t border-border flex items-center gap-4 text-[10px] text-text-muted">
+					<div class="hidden md:flex px-4 py-2 border-t border-border items-center gap-4 text-[10px] text-text-muted">
 						<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↑↓</kbd> navigate</span>
 						<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↵</kbd> open</span>
 					</div>

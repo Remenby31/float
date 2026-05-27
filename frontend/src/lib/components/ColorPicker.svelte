@@ -15,6 +15,7 @@
 	let popoverStyle = $state('');
 	let customColor = $state('');
 	let emojiSearch = $state('');
+	let isMobile = $state(false);
 
 	const presetColors = [
 		'#EF4444', '#F97316', '#EAB308', '#22C55E',
@@ -70,7 +71,8 @@
 		e.stopPropagation();
 		e.preventDefault();
 		if (open) { open = false; return; }
-		if (triggerEl) {
+		isMobile = window.innerWidth < 768;
+		if (!isMobile && triggerEl) {
 			const rect = triggerEl.getBoundingClientRect();
 			const spaceRight = window.innerWidth - rect.right;
 			const spaceBelow = window.innerHeight - rect.bottom;
@@ -81,6 +83,8 @@
 			} else {
 				popoverStyle = `position:fixed; bottom:${window.innerHeight - rect.top + 4}px; left:${rect.left}px;`;
 			}
+		} else {
+			popoverStyle = '';
 		}
 		tab = icon ? 'icon' : 'color';
 		customColor = color || '';
@@ -107,8 +111,11 @@
 {#if open}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[55]" onclick={() => open = false}></div>
-	<div class="bg-elevated border border-border rounded-xl shadow-xl z-[60] w-56 overflow-hidden picker-pop" style={popoverStyle}>
+	<div class="fixed inset-0 z-[55] {isMobile ? 'bg-black/50 backdrop-blur-[2px]' : ''}" onclick={() => open = false}></div>
+	<div
+		class="{isMobile ? 'fixed inset-x-0 bottom-0 z-[60] w-full rounded-t-2xl picker-slideUp' : 'z-[60] w-56 rounded-xl picker-pop'} bg-elevated border border-border shadow-xl overflow-hidden"
+		style="{isMobile ? 'padding-bottom: env(safe-area-inset-bottom, 0px)' : popoverStyle}"
+	>
 		<!-- Tabs -->
 		<div class="flex border-b border-border">
 			<button
@@ -203,5 +210,10 @@
 	@keyframes popIn {
 		from { opacity: 0; transform: scale(0.9); }
 		to { opacity: 1; transform: scale(1); }
+	}
+	.picker-slideUp { animation: slideUp 0.2s cubic-bezier(0, 0, 0.2, 1); }
+	@keyframes slideUp {
+		from { transform: translateY(100%); }
+		to { transform: translateY(0); }
 	}
 </style>

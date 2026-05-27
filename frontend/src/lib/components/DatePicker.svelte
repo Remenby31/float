@@ -188,16 +188,24 @@
 	let triggerEl: HTMLButtonElement;
 	let popoverStyle = $state('');
 
+	let isMobile = $state(false);
+
+	function checkMobile() {
+		isMobile = window.innerWidth < 768;
+	}
+
 	function openPicker() {
 		if (open) { open = false; textInput = ''; return; }
-		// Position popover relative to trigger using fixed positioning
-		if (triggerEl) {
+		checkMobile();
+		if (!isMobile && triggerEl) {
 			const rect = triggerEl.getBoundingClientRect();
 			const spaceBelow = window.innerHeight - rect.bottom;
 			const goUp = spaceBelow < 350;
 			popoverStyle = goUp
 				? `position:fixed; bottom:${window.innerHeight - rect.top + 4}px; left:${rect.left}px;`
 				: `position:fixed; top:${rect.bottom + 4}px; left:${rect.left}px;`;
+		} else {
+			popoverStyle = '';
 		}
 		open = true;
 		setTimeout(() => inputEl?.focus(), 50);
@@ -229,9 +237,12 @@
 	{#if open}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="fixed inset-0 z-[55]" onclick={() => open = false}></div>
+		<div class="fixed inset-0 z-[55] {isMobile ? 'bg-black/50 backdrop-blur-[2px]' : ''}" onclick={() => open = false}></div>
 
-		<div class="bg-elevated border border-border rounded-xl shadow-xl z-[60] w-64 overflow-hidden animate-popIn" style={popoverStyle}>
+		<div
+			class="{isMobile ? 'fixed inset-x-0 bottom-0 z-[60] w-full rounded-t-2xl animate-slideUp' : 'z-[60] w-64 rounded-xl animate-popIn'} bg-elevated border border-border shadow-xl overflow-hidden"
+			style="{isMobile ? 'padding-bottom: env(safe-area-inset-bottom, 0px)' : popoverStyle}"
+		>
 			<!-- Quick shortcuts -->
 			<div class="p-2 flex flex-wrap gap-1.5 border-b border-border">
 				<button type="button" onclick={() => setDate(addDays(0))} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-surface text-text-secondary hover:text-text transition-colors">today</button>
@@ -322,5 +333,10 @@
 	@keyframes popIn {
 		from { opacity: 0; transform: translateY(-4px) scale(0.96); }
 		to { opacity: 1; transform: translateY(0) scale(1); }
+	}
+	.animate-slideUp { animation: slideUp 0.2s cubic-bezier(0, 0, 0.2, 1); }
+	@keyframes slideUp {
+		from { transform: translateY(100%); }
+		to { transform: translateY(0); }
 	}
 </style>

@@ -142,7 +142,7 @@
 									<button
 										type="button"
 										onclick={() => toggleDone(dt.task)}
-										class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
+										class="w-4 h-4 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
 										style="border-color:{section.label === 'overdue' ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
 									></button>
 									<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -152,10 +152,10 @@
 										onclick={() => openTask(dt.task)}
 									>{dt.task.title}</span>
 									{#if timeLabel(dt.task.due_date!)}
-										<span class="text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
+										<span class="text-xs md:text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
 									{/if}
 									{#if section.label !== 'today' && section.label !== 'overdue' && section.label !== 'tomorrow'}
-										<span class="text-[10px] text-text-muted flex-shrink-0 w-16 text-right">{dayLabel(dt.task.due_date!)}</span>
+										<span class="text-xs md:text-[10px] text-text-muted flex-shrink-0 w-16 text-right">{dayLabel(dt.task.due_date!)}</span>
 									{/if}
 									<span class="flex items-center gap-1 flex-shrink-0 ml-1">
 										{#if dt.projectIcon}
@@ -163,7 +163,7 @@
 										{:else}
 											<span class="w-1.5 h-1.5 rounded-full" style="background:{dt.projectColor || '#525252'}"></span>
 										{/if}
-										<span class="text-[10px] text-text-muted max-w-[80px] truncate">{dt.projectName}</span>
+										<span class="text-xs md:text-[10px] text-text-muted max-w-[80px] truncate">{dt.projectName}</span>
 									</span>
 								</div>
 							{/each}
@@ -227,7 +227,7 @@
 		<button
 			type="button"
 			onclick={() => toggleDone(task)}
-			class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
+			class="w-4 h-4 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
 			style={task.is_done ? '' : 'border-color:var(--color-border-strong)'}
 		>
 			{#if task.is_done}
@@ -251,7 +251,7 @@
 		<button
 			type="button"
 			onclick={() => toggleDone(task)}
-			class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
+			class="w-4 h-4 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
 			style={task.is_done ? '' : 'border-color:var(--color-border-strong)'}
 		>
 			{#if task.is_done}

@@ -98,7 +98,7 @@
 					<button
 						type="button"
 						onclick={() => toggleDone(task)}
-						class="check-btn w-[18px] h-[18px] rounded-full border-2 border-border-strong flex-shrink-0 transition-all flex items-center justify-center"
+						class="check-btn w-[18px] h-[18px] rounded-full border-2 border-border-strong flex-shrink-0 transition-all flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
 					>
 						<svg class="check-icon w-2.5 h-2.5 opacity-0 transition-opacity" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 							<polyline points="2,6 5,9 10,3"/>
@@ -108,10 +108,10 @@
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<span class="flex-1 text-sm cursor-pointer hover:text-text-secondary transition-colors" onclick={() => selectedTask = task}>{task.title}</span>
 					{#if task.due_date}
-						<span class="text-[11px] text-text-muted">{relativeDate(task.due_date)}</span>
+						<span class="text-xs md:text-[11px] text-text-muted">{relativeDate(task.due_date)}</span>
 					{/if}
-					<div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-						<button type="button" onclick={() => deleteTask(task)} class="w-6 h-6 rounded-md flex items-center justify-center text-text-muted hover:text-danger hover:bg-surface transition-colors">
+					<div class="flex items-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+						<button type="button" onclick={() => deleteTask(task)} class="w-6 h-6 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-md flex items-center justify-center text-text-muted hover:text-danger hover:bg-surface transition-colors">
 							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						</button>
 					</div>

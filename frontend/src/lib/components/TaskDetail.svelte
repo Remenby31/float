@@ -16,6 +16,13 @@
 		onDelete: (id: string) => void;
 	} = $props();
 
+	// Lock body scroll when modal is open
+	$effect(() => {
+		if (task) document.body.style.overflow = 'hidden';
+		else document.body.style.overflow = '';
+		return () => { document.body.style.overflow = ''; };
+	});
+
 	let attachments = $state<Attachment[]>([]);
 	let editingTitle = $state(false);
 	let titleEditValue = $state('');
@@ -119,10 +126,10 @@
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] sm:pt-[12vh] px-4 pointer-events-none"
+		class="fixed inset-0 z-50 flex items-end md:items-start justify-center md:pt-[12vh] md:px-4 pointer-events-none"
 		onkeydown={(e) => { if (e.key === 'Escape') close(); }}
 	>
-		<div class="bg-bg border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col pointer-events-auto animate-modalIn">
+		<div class="bg-bg border-t md:border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-2xl max-h-[90vh] md:max-h-[80vh] flex flex-col pointer-events-auto animate-modalIn" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
 
 			<!-- Header -->
 			<div class="flex items-center justify-between px-5 py-3.5 border-b border-border flex-shrink-0">
@@ -205,7 +212,7 @@
 									<button
 										type="button"
 										onclick={() => deleteAttachment(att.name)}
-										class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all"
+										class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-danger md:opacity-0 md:group-hover:opacity-100 transition-all"
 										aria-label="delete attachment"
 									>
 										<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -248,8 +255,14 @@
 	.animate-spin { animation: spin 0.6s linear infinite; }
 	@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 	@keyframes modalIn {
-		from { opacity: 0; transform: translateY(8px) scale(0.98); }
-		to { opacity: 1; transform: translateY(0) scale(1); }
+		from { opacity: 0; transform: translateY(100px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+	@media (min-width: 768px) {
+		@keyframes modalIn {
+			from { opacity: 0; transform: translateY(8px) scale(0.98); }
+			to { opacity: 1; transform: translateY(0) scale(1); }
+		}
 	}
 	@keyframes spin { to { transform: rotate(360deg); } }
 </style>
