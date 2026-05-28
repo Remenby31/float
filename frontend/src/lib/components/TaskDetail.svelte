@@ -126,14 +126,14 @@
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-50 flex items-end md:items-start justify-center md:pt-[12vh] md:px-4 pointer-events-none"
+		class="fixed inset-0 z-50 flex items-end md:items-start justify-center md:pt-[6vh] md:px-4 pointer-events-none"
 		onkeydown={(e) => { if (e.key === 'Escape') close(); }}
 	>
-		<div class="bg-bg border-t md:border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-2xl max-h-[90vh] md:max-h-[80vh] flex flex-col pointer-events-auto animate-modalIn" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
+		<div class="bg-bg border-t md:border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-3xl max-h-[92vh] md:max-h-[85vh] flex flex-col pointer-events-auto animate-modalIn" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
 
-			<!-- Header -->
-			<div class="flex items-center justify-between px-5 py-3.5 border-b border-border flex-shrink-0">
-				<div class="flex items-center gap-2.5">
+			<!-- Header with title -->
+			<div class="flex items-center justify-between px-5 py-3.5 border-b border-border flex-shrink-0 gap-3">
+				<div class="flex items-center gap-3 flex-1 min-w-0">
 					<button
 						type="button"
 						onclick={toggleDone}
@@ -145,9 +145,24 @@
 							<svg class="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>
 						{/if}
 					</button>
-					{#if task.is_done}<span class="text-xs text-success">done</span>{/if}
+					{#if editingTitle}
+						<div class="flex-1 min-w-0">
+							<SmartInput
+								bind:value={titleEditValue}
+								placeholder="task title... @demain @midi @lundi"
+								onSubmit={handleTitleSubmit}
+							/>
+						</div>
+					{:else}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<h3
+							class="text-lg font-medium cursor-text hover:text-text-secondary transition-colors leading-snug truncate {task.is_done ? 'line-through text-text-muted' : ''}"
+							onclick={() => { editingTitle = true; titleEditValue = task?.title || ''; }}
+						>{task.title}</h3>
+					{/if}
 				</div>
-				<div class="flex items-center gap-1">
+				<div class="flex items-center gap-1 flex-shrink-0">
 					<button type="button" onclick={handleDelete} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-surface transition-all" title="delete">
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
 					</button>
@@ -159,22 +174,6 @@
 
 			<!-- Content -->
 			<div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-				<!-- Title -->
-				{#if editingTitle}
-					<SmartInput
-						bind:value={titleEditValue}
-						placeholder="task title... @demain @heavy @15h"
-						onSubmit={handleTitleSubmit}
-					/>
-				{:else}
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<h3
-						class="text-lg font-medium cursor-text hover:text-text-secondary transition-colors leading-snug"
-						onclick={() => { editingTitle = true; titleEditValue = task?.title || ''; }}
-					>{task.title}</h3>
-				{/if}
-
 				<!-- Due date -->
 				<div>
 					<p class="text-[10px] uppercase tracking-wider text-text-muted mb-2">due</p>
@@ -182,14 +181,14 @@
 				</div>
 
 				<!-- Notes -->
-				<div>
+				<div class="flex-1 flex flex-col">
 					<p class="text-[10px] uppercase tracking-wider text-text-muted mb-2">notes</p>
 					<textarea
 						bind:value={descriptionText}
 						onblur={saveDescription}
 						placeholder="add notes..."
-						rows="3"
-						class="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all resize-none"
+						rows="8"
+						class="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all resize-y min-h-[120px]"
 					></textarea>
 				</div>
 
