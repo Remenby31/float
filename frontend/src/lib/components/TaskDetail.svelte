@@ -126,7 +126,7 @@
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-50 flex items-end md:items-start justify-center md:pt-[6vh] md:px-4 pointer-events-none"
+		class="fixed inset-0 z-50 flex items-end md:items-center justify-center md:px-4 pointer-events-none"
 		onkeydown={(e) => { if (e.key === 'Escape') close(); }}
 	>
 		<div class="bg-bg border-t md:border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-3xl max-h-[92vh] md:max-h-[85vh] flex flex-col pointer-events-auto animate-modalIn" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
@@ -181,7 +181,7 @@
 				</div>
 
 				<!-- Notes -->
-				<div class="flex-1 flex flex-col">
+				<div class="flex-1 flex flex-col relative">
 					<p class="text-[10px] uppercase tracking-wider text-text-muted mb-2">notes</p>
 					<textarea
 						bind:value={descriptionText}
@@ -190,37 +190,7 @@
 						rows="8"
 						class="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all resize-y min-h-[120px]"
 					></textarea>
-				</div>
-
-				<!-- Attachments -->
-				<div>
-					<p class="text-[10px] uppercase tracking-wider text-text-muted mb-2">attachments</p>
-
-					{#if attachments.length > 0}
-						<div class="space-y-1.5 mb-3">
-							{#each attachments as att}
-								<div class="flex items-center gap-2.5 bg-surface border border-border rounded-lg px-3 py-2 group">
-									<span class="text-[10px] uppercase text-text-muted font-medium w-6">{fileIcon(att.name)}</span>
-									<a
-										href={api.attachmentUrl(projectId, task.id, att.name)}
-										target="_blank"
-										class="flex-1 text-sm text-text hover:text-text-secondary transition-colors truncate"
-										download
-									>{att.name}</a>
-									<span class="text-[10px] text-text-muted">{formatSize(att.size)}</span>
-									<button
-										type="button"
-										onclick={() => deleteAttachment(att.name)}
-										class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-danger md:opacity-0 md:group-hover:opacity-100 transition-all"
-										aria-label="delete attachment"
-									>
-										<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-
+					<!-- Attach button -->
 					<input
 						bind:this={fileInput}
 						type="file"
@@ -232,17 +202,41 @@
 						type="button"
 						onclick={() => fileInput?.click()}
 						disabled={uploading}
-						class="flex items-center gap-2 px-3 py-2 bg-surface border border-dashed border-border-strong rounded-xl text-xs text-text-muted hover:text-text-secondary hover:border-text-muted transition-all w-full justify-center"
+						class="absolute bottom-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center text-text-muted/40 hover:text-text-muted hover:bg-surface/80 transition-all"
+						title="attach file"
 					>
 						{#if uploading}
 							<span class="w-3 h-3 border-2 border-text-muted/30 border-t-text-muted rounded-full animate-spin"></span>
-							uploading...
 						{:else}
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-							add file
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
 						{/if}
 					</button>
 				</div>
+
+				<!-- Attached files (compact) -->
+				{#if attachments.length > 0}
+					<div class="flex flex-wrap gap-2">
+						{#each attachments as att}
+							<a
+								href={api.attachmentUrl(projectId, task.id, att.name)}
+								target="_blank"
+								download
+								class="group flex items-center gap-1.5 bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-text-muted hover:text-text-secondary hover:border-border-strong transition-all"
+							>
+								<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+								<span class="truncate max-w-[120px]">{att.name}</span>
+								<button
+									type="button"
+									onclick={(e) => { e.preventDefault(); e.stopPropagation(); deleteAttachment(att.name); }}
+									class="w-4 h-4 flex items-center justify-center text-text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all"
+									aria-label="delete"
+								>
+									<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+								</button>
+							</a>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
