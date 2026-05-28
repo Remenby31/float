@@ -2,6 +2,8 @@
 	import type { Task } from '$lib/api';
 	import TaskDetail from '$lib/components/TaskDetail.svelte';
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
+	import SmartInput from '$lib/components/SmartInput.svelte';
+	import { parseInput } from '$lib/smart-input';
 	import { relativeDate } from '$lib/utils';
 	import { getDataStore } from '$lib/stores/data.svelte';
 
@@ -91,11 +93,14 @@
 		editingTaskValue = task.title;
 	}
 
-	async function saveInlineEdit(task: Task) {
-		const trimmed = editingTaskValue.trim();
+	async function saveInlineEdit(task: Task, parsed?: ReturnType<typeof parseInput>) {
 		editingTaskId = null;
-		if (!trimmed || trimmed === task.title) return;
-		await store.updateTask(task.project_id, task.id, { title: trimmed } as any);
+		if (!parsed) parsed = parseInput(editingTaskValue);
+		const updates: any = {};
+		if (parsed.title && parsed.title !== task.title) updates.title = parsed.title;
+		if (parsed.due_date) updates.due_date = parsed.due_date;
+		if (Object.keys(updates).length === 0) return;
+		await store.updateTask(task.project_id, task.id, updates);
 	}
 
 	function onTaskUpdate() { store.refreshTasks(); }
@@ -160,13 +165,14 @@
 										style="border-color:{section.label === 'overdue' ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
 									></button>
 									{#if editingTaskId === dt.task.id}
-										<input
-											bind:value={editingTaskValue}
-											autofocus
-											class="flex-1 bg-transparent text-sm text-text focus:outline-none border-b border-text/20 py-0.5"
-											onblur={() => saveInlineEdit(dt.task)}
-											onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveInlineEdit(dt.task); } if (e.key === 'Escape') { editingTaskId = null; } }}
-										/>
+										<div class="flex-1">
+											<SmartInput
+												bind:value={editingTaskValue}
+												placeholder={dt.task.title}
+												onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)}
+												class="inline-edit"
+											/>
+										</div>
 									{:else}
 										<!-- svelte-ignore a11y_click_events_have_key_events -->
 										<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -265,13 +271,14 @@
 			{/if}
 		</button>
 		{#if editingTaskId === task.id}
-			<input
-				bind:value={editingTaskValue}
-				autofocus
-				class="flex-1 bg-transparent text-sm text-text focus:outline-none border-b border-text/20 py-0.5"
-				onblur={() => saveInlineEdit(task)}
-				onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveInlineEdit(task); } if (e.key === 'Escape') { editingTaskId = null; } }}
-			/>
+			<div class="flex-1">
+				<SmartInput
+					bind:value={editingTaskValue}
+					placeholder={task.title}
+					onSubmit={(parsed) => saveInlineEdit(task, parsed)}
+					class="inline-edit"
+				/>
+			</div>
 		{:else}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -305,13 +312,14 @@
 			{/if}
 		</button>
 		{#if editingTaskId === task.id}
-			<input
-				bind:value={editingTaskValue}
-				autofocus
-				class="flex-1 bg-transparent text-sm text-text focus:outline-none border-b border-text/20 py-0.5"
-				onblur={() => saveInlineEdit(task)}
-				onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveInlineEdit(task); } if (e.key === 'Escape') { editingTaskId = null; } }}
-			/>
+			<div class="flex-1">
+				<SmartInput
+					bind:value={editingTaskValue}
+					placeholder={task.title}
+					onSubmit={(parsed) => saveInlineEdit(task, parsed)}
+					class="inline-edit"
+				/>
+			</div>
 		{:else}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->

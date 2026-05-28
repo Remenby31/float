@@ -19,6 +19,7 @@
 	let selectedIdx = $state(0);
 	let showSuggestions = $state(false);
 	let inputEl: HTMLInputElement;
+	let inline = $derived(className.includes('inline-edit'));
 
 	// Parsed preview of current input
 	let parsed = $derived(parseInput(value));
@@ -83,11 +84,12 @@
 			onfocus={() => { if (suggestions.length) showSuggestions = true; }}
 			onblur={() => setTimeout(() => showSuggestions = false, 150)}
 			{placeholder}
-			class="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all {hasTags ? 'pr-24' : ''}"
+			autofocus={inline}
+			class="{inline ? 'w-full bg-transparent border-b border-text/20 px-0 py-0.5 text-sm text-text placeholder:text-text-muted/60 focus:outline-none transition-all' : 'w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all'} {hasTags && !inline ? 'pr-24' : ''}"
 		/>
 
 		<!-- Inline tag previews -->
-		{#if hasTags}
+		{#if hasTags && !inline}
 			<div class="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1.5">
 				{#if parsed.due_date}
 					{@const d = new Date(parsed.due_date)}
