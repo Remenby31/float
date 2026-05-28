@@ -60,7 +60,19 @@ function parseRelativeDays(s: string): number | null {
 	return null;
 }
 
+const TIME_KEYWORDS: { key: string; label: string; hours: number; minutes: number }[] = [
+	{ key: 'matin', label: 'matin', hours: 9, minutes: 0 },
+	{ key: 'morning', label: 'morning', hours: 9, minutes: 0 },
+	{ key: 'midi', label: 'midi', hours: 12, minutes: 0 },
+	{ key: 'noon', label: 'noon', hours: 12, minutes: 0 },
+	{ key: 'soir', label: 'ce soir', hours: 19, minutes: 0 },
+	{ key: 'cesoir', label: 'ce soir', hours: 19, minutes: 0 },
+	{ key: 'evening', label: 'evening', hours: 19, minutes: 0 },
+];
+
 function parseTime(s: string): { hours: number; minutes: number } | null {
+	const timeKw = TIME_KEYWORDS.find(t => t.key === s);
+	if (timeKw) return { hours: timeKw.hours, minutes: timeKw.minutes };
 	let m = s.match(/^(\d{1,2})h(\d{2})?$/);
 	if (m) return { hours: parseInt(m[1]), minutes: m[2] ? parseInt(m[2]) : 0 };
 	m = s.match(/^(\d{1,2}):(\d{2})$/);
@@ -137,6 +149,13 @@ export function getSuggestions(partial: string, projects: string[]): Suggestion[
 		if (d.key.startsWith(lower) || d.label.startsWith(lower)) {
 			const date = d.fn();
 			results.push({ type: 'date', label: d.label, value: d.key, description: formatDatePreview(date) });
+		}
+	}
+
+	for (const t of TIME_KEYWORDS) {
+		if (t.key.startsWith(lower) || t.label.startsWith(lower)) {
+			const formatted = `${t.hours.toString().padStart(2, '0')}:${t.minutes.toString().padStart(2, '0')}`;
+			results.push({ type: 'time', label: t.label, value: t.key, description: formatted });
 		}
 	}
 

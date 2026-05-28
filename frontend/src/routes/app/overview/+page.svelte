@@ -9,6 +9,8 @@
 	let selectedTask = $state<Task | null>(null);
 	let selectedProjectId = $state('');
 	let addInputs = $state<Record<string, string>>({});
+	let editingTaskId = $state<string | null>(null);
+	let editingTaskValue = $state('');
 
 	let groups = $derived(store.projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
@@ -84,6 +86,18 @@
 		selectedProjectId = task.project_id;
 	}
 
+	function startEditing(task: Task) {
+		editingTaskId = task.id;
+		editingTaskValue = task.title;
+	}
+
+	async function saveInlineEdit(task: Task) {
+		const trimmed = editingTaskValue.trim();
+		editingTaskId = null;
+		if (!trimmed || trimmed === task.title) return;
+		await store.updateTask(task.project_id, task.id, { title: trimmed } as any);
+	}
+
 	function onTaskUpdate() { store.refreshTasks(); }
 	function onTaskDelete() { selectedTask = null; store.refreshTasks(); }
 
@@ -145,18 +159,34 @@
 										class="w-4 h-4 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
 										style="border-color:{section.label === 'overdue' ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
 									></button>
-									<!-- svelte-ignore a11y_click_events_have_key_events -->
-									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<span
-										class="flex-1 text-sm cursor-pointer hover:text-text-secondary transition-colors truncate"
-										onclick={() => openTask(dt.task)}
-									>{dt.task.title}</span>
+									{#if editingTaskId === dt.task.id}
+										<input
+											bind:value={editingTaskValue}
+											autofocus
+											class="flex-1 bg-transparent text-sm text-text focus:outline-none border-b border-text/20 py-0.5"
+											onblur={() => saveInlineEdit(dt.task)}
+											onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveInlineEdit(dt.task); } if (e.key === 'Escape') { editingTaskId = null; } }}
+										/>
+									{:else}
+										<!-- svelte-ignore a11y_click_events_have_key_events -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<span
+											class="flex-1 text-sm cursor-text hover:text-text-secondary transition-colors truncate"
+											onclick={() => startEditing(dt.task)}
+										>{dt.task.title}</span>
+									{/if}
+									{#if dt.task.description}
+										<svg class="w-3 h-3 text-text-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+									{/if}
 									{#if timeLabel(dt.task.due_date!)}
 										<span class="text-xs md:text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
 									{/if}
 									{#if section.label !== 'today' && section.label !== 'overdue' && section.label !== 'tomorrow'}
 										<span class="text-xs md:text-[10px] text-text-muted flex-shrink-0 w-16 text-right">{dayLabel(dt.task.due_date!)}</span>
 									{/if}
+									<button type="button" onclick={() => openTask(dt.task)} class="w-5 h-5 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all md:opacity-0 md:group-hover:opacity-100 flex-shrink-0" title="open detail">
+										<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+									</button>
 									<span class="flex items-center gap-1 flex-shrink-0 ml-1">
 										{#if dt.projectIcon}
 											<span class="text-[11px]">{dt.projectIcon}</span>
@@ -234,15 +264,31 @@
 				<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>
 			{/if}
 		</button>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<span
-			class="flex-1 text-sm cursor-pointer transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
-			onclick={() => openTask(task)}
-		>{task.title}</span>
+		{#if editingTaskId === task.id}
+			<input
+				bind:value={editingTaskValue}
+				autofocus
+				class="flex-1 bg-transparent text-sm text-text focus:outline-none border-b border-text/20 py-0.5"
+				onblur={() => saveInlineEdit(task)}
+				onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveInlineEdit(task); } if (e.key === 'Escape') { editingTaskId = null; } }}
+			/>
+		{:else}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<span
+				class="flex-1 text-sm cursor-text transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
+				onclick={() => startEditing(task)}
+			>{task.title}</span>
+		{/if}
+		{#if task.description}
+			<svg class="w-3 h-3 text-text-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+		{/if}
 		{#if task.due_date}
 			<span class="text-[10px] text-text-muted w-12 text-right flex-shrink-0">{relativeDate(task.due_date)}</span>
 		{/if}
+		<button type="button" onclick={() => openTask(task)} class="w-5 h-5 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all md:opacity-0 md:group-hover:opacity-100 flex-shrink-0" title="open detail">
+			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+		</button>
 	</div>
 {/snippet}
 
@@ -258,15 +304,31 @@
 				<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>
 			{/if}
 		</button>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<span
-			class="flex-1 text-sm cursor-pointer transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
-			onclick={() => openTask(task)}
-		>{task.title}</span>
+		{#if editingTaskId === task.id}
+			<input
+				bind:value={editingTaskValue}
+				autofocus
+				class="flex-1 bg-transparent text-sm text-text focus:outline-none border-b border-text/20 py-0.5"
+				onblur={() => saveInlineEdit(task)}
+				onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveInlineEdit(task); } if (e.key === 'Escape') { editingTaskId = null; } }}
+			/>
+		{:else}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<span
+				class="flex-1 text-sm cursor-text transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
+				onclick={() => startEditing(task)}
+			>{task.title}</span>
+		{/if}
+		{#if task.description}
+			<svg class="w-3 h-3 text-text-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+		{/if}
 		{#if task.due_date}
 			<span class="text-[10px] text-text-muted w-12 text-right flex-shrink-0">{relativeDate(task.due_date)}</span>
 		{/if}
+		<button type="button" onclick={() => openTask(task)} class="w-5 h-5 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all md:opacity-0 md:group-hover:opacity-100 flex-shrink-0" title="open detail">
+			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+		</button>
 	</div>
 {/snippet}
 

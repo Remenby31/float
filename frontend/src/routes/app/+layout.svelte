@@ -147,7 +147,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<aside
-		class="fixed inset-y-0 left-0 z-50 w-64 border-r border-border flex flex-col select-none bg-bg transform transition-transform duration-200 ease-out md:static md:w-56 md:transform-none {sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
+		class="fixed inset-y-0 left-0 z-50 w-64 border-r border-border flex flex-col select-none bg-bg transform transition-transform duration-200 ease-out md:w-56 md:transform-none {sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
 		style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px)"
 		onclick={(e) => { if ((e.target as HTMLElement).closest('a')) sidebarOpen = false; }}
 	>
@@ -338,7 +338,7 @@
 	@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 
-	<main class="flex-1 min-h-screen overflow-y-auto">
+	<main class="flex-1 min-h-screen overflow-y-auto md:ml-56">
 		{@render children()}
 	</main>
 </div>

@@ -3,7 +3,7 @@
 
 	let {
 		value = $bindable(''),
-		placeholder = 'add a task... @demain @heavy @15h',
+		placeholder = 'add a task... @demain @midi @lundi',
 		projectNames = [],
 		onSubmit,
 		class: className = '',
@@ -90,8 +90,9 @@
 		{#if hasTags}
 			<div class="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1.5">
 				{#if parsed.due_date}
+					{@const d = new Date(parsed.due_date)}
 					<span class="text-[10px] text-text-muted bg-surface border border-border rounded-md px-1.5 py-0.5">
-						{new Date(parsed.due_date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+						{d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}{d.getHours() || d.getMinutes() ? ` ${d.getHours()}h${d.getMinutes().toString().padStart(2, '0')}` : ''}
 					</span>
 				{/if}
 			</div>
