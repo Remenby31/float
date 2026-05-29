@@ -10,12 +10,12 @@ export const TaskMention = Node.create({
 		return {
 			id: {
 				default: 'task',
-				parseHTML: (el: HTMLElement) => el.getAttribute('data-id') || 'task',
+				parseHTML: (el: HTMLElement) => el.getAttribute('data-id') || el.getAttribute('id') || 'task',
 				renderHTML: (attrs: Record<string, string>) => ({ 'data-id': attrs.id }),
 			},
 			label: {
 				default: '',
-				parseHTML: (el: HTMLElement) => el.getAttribute('data-label') || '',
+				parseHTML: (el: HTMLElement) => el.getAttribute('data-label') || el.getAttribute('label') || '',
 				renderHTML: (attrs: Record<string, string>) => ({ 'data-label': attrs.label }),
 			},
 		};
