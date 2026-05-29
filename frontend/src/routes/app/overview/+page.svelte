@@ -227,10 +227,9 @@
 
 				{#if children.length === 0}
 					<!-- Standalone project: show tasks -->
-					{@const grpTasks = store.tasksForProject(grp.id)}
-					{#if grpTasks.length > 0}
+					{#if store.tasksForProject(grp.id).length > 0}
 						<div class="divide-y divide-border/50">
-							{#each [...grpTasks].sort((a, b) => Number(a.is_done) - Number(b.is_done)) as task (task.id)}
+							{#each [...store.tasksForProject(grp.id)].sort((a, b) => Number(a.is_done) - Number(b.is_done)) as task (task.id)}
 								{@render taskRow(task)}
 							{/each}
 						</div>
@@ -245,10 +244,9 @@
 								<ColorPicker color={child.color || grp.color} icon={child.icon} onchange={(c, i) => updateProjectAppearance(child.id, c, i)} />
 								<a href="/app/project/{child.id}" class="text-xs font-medium text-text-secondary hover:text-text transition-colors">{child.title}</a>
 							</div>
-							{@const childTasks = store.tasksForProject(child.id)}
-							{#if childTasks.length > 0}
+							{#if store.tasksForProject(child.id).length > 0}
 								<div class="divide-y divide-border/50">
-									{#each [...childTasks].sort((a, b) => Number(a.is_done) - Number(b.is_done)) as task (task.id)}
+									{#each [...store.tasksForProject(child.id)].sort((a, b) => Number(a.is_done) - Number(b.is_done)) as task (task.id)}
 										{@render taskRowIndented(task)}
 									{/each}
 								</div>
