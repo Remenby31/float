@@ -115,8 +115,36 @@
 
 	function close() { task = null; }
 
+	// Subtasks: lines containing @task or @done
+	interface Subtask { lineIdx: number; text: string; done: boolean; }
 
+	let subtasks = $derived.by(() => {
+		if (!descriptionText) return [] as Subtask[];
+		const lines = descriptionText.split('\n');
+		const result: Subtask[] = [];
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i].trim();
+			const taskMatch = line.match(/^@task\s+(.+)$|^(.+)\s+@task$/i);
+			const doneMatch = line.match(/^@done\s+(.+)$|^(.+)\s+@done$/i);
+			if (taskMatch) result.push({ lineIdx: i, text: (taskMatch[1] || taskMatch[2]).trim(), done: false });
+			else if (doneMatch) result.push({ lineIdx: i, text: (doneMatch[1] || doneMatch[2]).trim(), done: true });
+		}
+		return result;
+	});
 
+	function toggleSubtask(st: Subtask) {
+		const lines = descriptionText.split('\n');
+		const line = lines[st.lineIdx].trim();
+		if (st.done) {
+			// @done → @task
+			lines[st.lineIdx] = lines[st.lineIdx].replace(/@done/i, '@task');
+		} else {
+			// @task → @done
+			lines[st.lineIdx] = lines[st.lineIdx].replace(/@task/i, '@done');
+		}
+		descriptionText = lines.join('\n');
+		saveDescription();
+	}
 </script>
 
 {#if task}
@@ -179,6 +207,28 @@
 					<p class="text-[10px] uppercase tracking-wider text-text-muted w-10">due</p>
 					<DatePicker value={task.due_date} onchange={onDateChange} />
 				</div>
+
+				<!-- Subtasks -->
+				{#if subtasks.length > 0}
+					<div class="space-y-0.5">
+						{#each subtasks as st}
+							<button
+								type="button"
+								onclick={() => toggleSubtask(st)}
+								class="flex items-center gap-2.5 w-full text-left px-1 py-1 rounded-lg hover:bg-surface/50 transition-colors group"
+							>
+								<span
+									class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {st.done ? 'bg-success border-success' : 'border-border-strong group-hover:border-success'}"
+								>
+									{#if st.done}
+										<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>
+									{/if}
+								</span>
+								<span class="text-sm {st.done ? 'line-through text-text-muted' : 'text-text'}">{st.text}</span>
+							</button>
+						{/each}
+					</div>
+				{/if}
 
 				<!-- Notes -->
 				<div class="flex-1 flex flex-col relative min-h-0">
