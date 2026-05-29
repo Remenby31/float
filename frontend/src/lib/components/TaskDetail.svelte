@@ -210,21 +210,29 @@
 
 				<!-- Subtasks -->
 				{#if subtasks.length > 0}
+					{@const pending = subtasks.filter(s => !s.done)}
+					{@const done = subtasks.filter(s => s.done)}
 					<div class="space-y-0.5">
-						{#each subtasks as st}
+						{#each pending as st (st.lineIdx)}
 							<button
 								type="button"
 								onclick={() => toggleSubtask(st)}
-								class="flex items-center gap-2.5 w-full text-left px-1 py-1 rounded-lg hover:bg-surface/50 transition-colors group"
+								class="subtask-row flex items-center gap-2.5 w-full text-left px-1 py-1 rounded-lg hover:bg-surface/50 transition-colors group"
 							>
-								<span
-									class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {st.done ? 'bg-success border-success' : 'border-border-strong group-hover:border-success'}"
-								>
-									{#if st.done}
-										<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>
-									{/if}
+								<span class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all border-border-strong group-hover:border-success"></span>
+								<span class="text-sm text-text">{st.text}</span>
+							</button>
+						{/each}
+						{#each done as st (st.lineIdx)}
+							<button
+								type="button"
+								onclick={() => toggleSubtask(st)}
+								class="subtask-row flex items-center gap-2.5 w-full text-left px-1 py-1 rounded-lg hover:bg-surface/50 transition-colors group opacity-50 hover:opacity-70"
+							>
+								<span class="subtask-check w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center bg-success border-success">
+									<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>
 								</span>
-								<span class="text-sm {st.done ? 'line-through text-text-muted' : 'text-text'}">{st.text}</span>
+								<span class="text-sm line-through text-text-muted">{st.text}</span>
 							</button>
 						{/each}
 					</div>
@@ -306,4 +314,11 @@
 		}
 	}
 	@keyframes spin { to { transform: rotate(360deg); } }
+	.subtask-check { animation: checkPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+	@keyframes checkPop {
+		0% { transform: scale(1); }
+		40% { transform: scale(1.3); }
+		100% { transform: scale(1); }
+	}
+	.subtask-row { transition: opacity 0.2s ease, transform 0.2s ease; }
 </style>
