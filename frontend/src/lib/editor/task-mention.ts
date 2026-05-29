@@ -8,8 +8,16 @@ export const TaskMention = Node.create({
 
 	addAttributes() {
 		return {
-			id: { default: 'task' },
-			label: { default: '' },
+			id: {
+				default: 'task',
+				parseHTML: (el: HTMLElement) => el.getAttribute('data-id') || 'task',
+				renderHTML: (attrs: Record<string, string>) => ({ 'data-id': attrs.id }),
+			},
+			label: {
+				default: '',
+				parseHTML: (el: HTMLElement) => el.getAttribute('data-label') || '',
+				renderHTML: (attrs: Record<string, string>) => ({ 'data-label': attrs.label }),
+			},
 		};
 	},
 
