@@ -129,7 +129,7 @@
 		class="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:py-10 md:px-4 pointer-events-none"
 		onkeydown={(e) => { if (e.key === 'Escape') close(); }}
 	>
-		<div class="bg-bg border-t md:border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-3xl max-h-[92vh] md:h-full flex flex-col pointer-events-auto animate-modalIn" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
+		<div class="bg-bg border-t md:border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-4xl max-h-[92vh] md:h-full flex flex-col pointer-events-auto animate-modalIn" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
 
 			<!-- Header with title -->
 			<div class="flex items-center justify-between px-5 py-3.5 border-b border-border flex-shrink-0 gap-3">
