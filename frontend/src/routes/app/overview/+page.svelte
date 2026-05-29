@@ -227,14 +227,7 @@
 
 				{#if children.length === 0}
 					<!-- Standalone project: show tasks -->
-					{#if store.tasksForProject(grp.id).length > 0}
-						<div class="divide-y divide-border/50">
-							{#each [...store.tasksForProject(grp.id)].sort((a, b) => Number(a.is_done) - Number(b.is_done)) as task (task.id)}
-								{@render taskRow(task)}
-							{/each}
-						</div>
-					{/if}
-					{@render addRow(grp.id)}
+					{@render taskListWithAdd(store.tasksForProject(grp.id), taskRow, addRow, grp.id)}
 				{:else}
 					<!-- Group: show each project -->
 					{#each children as child}
@@ -244,14 +237,7 @@
 								<ColorPicker color={child.color || grp.color} icon={child.icon} onchange={(c, i) => updateProjectAppearance(child.id, c, i)} />
 								<a href="/app/project/{child.id}" class="text-xs font-medium text-text-secondary hover:text-text transition-colors">{child.title}</a>
 							</div>
-							{#if store.tasksForProject(child.id).length > 0}
-								<div class="divide-y divide-border/50">
-									{#each [...store.tasksForProject(child.id)].sort((a, b) => Number(a.is_done) - Number(b.is_done)) as task (task.id)}
-										{@render taskRowIndented(task)}
-									{/each}
-								</div>
-							{/if}
-							{@render addRowIndented(child.id)}
+							{@render taskListWithAdd(store.tasksForProject(child.id), taskRowIndented, addRowIndented, child.id)}
 						</div>
 					{/each}
 				{/if}
@@ -260,6 +246,35 @@
 	</div>
 </div>
 {/if}
+
+{#snippet taskListWithAdd(tasks: Task[], row: typeof taskRow, add: typeof addRow, projectId: string)}
+	{@const pending = tasks.filter(t => !t.is_done)}
+	{@const done = tasks.filter(t => t.is_done)}
+	{#if pending.length > 0}
+		<div class="divide-y divide-border/50">
+			{#each pending as task (task.id)}
+				{@render row(task)}
+			{/each}
+		</div>
+	{/if}
+	{@render add(projectId)}
+	{#if done.length >= 2}
+		<details class="border-t border-border/30">
+			<summary class="px-4 py-1.5 text-[10px] text-text-muted cursor-pointer select-none hover:text-text-secondary transition-colors">{done.length} completed</summary>
+			<div class="divide-y divide-border/50">
+				{#each done as task (task.id)}
+					{@render row(task)}
+				{/each}
+			</div>
+		</details>
+	{:else if done.length === 1}
+		<div class="divide-y divide-border/50 border-t border-border/30">
+			{#each done as task (task.id)}
+				{@render row(task)}
+			{/each}
+		</div>
+	{/if}
+{/snippet}
 
 {#snippet taskRow(task: Task)}
 	<div class="flex items-center gap-3 px-4 py-2 hover:bg-surface/30 transition-colors group">
