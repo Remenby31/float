@@ -258,18 +258,21 @@
 		</div>
 	{/if}
 	{@render add(projectId)}
-	{#if done.length >= 2}
-		<details class="border-t border-border/30">
-			<summary class="px-4 py-1.5 text-[10px] text-text-muted cursor-pointer select-none hover:text-text-secondary transition-colors">{done.length} completed</summary>
-			<div class="divide-y divide-border/50">
-				{#each done as task (task.id)}
-					{@render row(task)}
-				{/each}
-			</div>
-		</details>
-	{:else if done.length === 1}
-		<div class="divide-y divide-border/50 border-t border-border/30">
-			{#each done as task (task.id)}
+	{#if done.length > 0}
+		{@const visible = done.slice(-2)}
+		{@const hidden = done.slice(0, -2)}
+		{#if hidden.length > 0}
+			<details class="border-t border-border/30">
+				<summary class="px-4 py-1.5 text-[10px] text-text-muted cursor-pointer select-none hover:text-text-secondary transition-colors">+{hidden.length} completed</summary>
+				<div class="divide-y divide-border/50">
+					{#each hidden as task (task.id)}
+						{@render row(task)}
+					{/each}
+				</div>
+			</details>
+		{/if}
+		<div class="divide-y divide-border/50 {hidden.length === 0 ? 'border-t border-border/30' : ''}">
+			{#each visible as task (task.id)}
 				{@render row(task)}
 			{/each}
 		</div>
