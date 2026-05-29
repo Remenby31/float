@@ -173,22 +173,20 @@
 			</div>
 
 			<!-- Content -->
-			<div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+			<div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
 				<!-- Due date -->
-				<div>
-					<p class="text-[10px] uppercase tracking-wider text-text-muted mb-2">due</p>
+				<div class="flex items-center gap-3">
+					<p class="text-[10px] uppercase tracking-wider text-text-muted w-10">due</p>
 					<DatePicker value={task.due_date} onchange={onDateChange} />
 				</div>
 
 				<!-- Notes -->
-				<div class="flex-1 flex flex-col relative">
-					<p class="text-[10px] uppercase tracking-wider text-text-muted mb-2">notes</p>
+				<div class="flex-1 flex flex-col relative min-h-0">
 					<textarea
 						bind:value={descriptionText}
 						onblur={saveDescription}
-						placeholder="add notes..."
-						rows="8"
-						class="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all resize-y min-h-[120px]"
+						placeholder="write something..."
+						class="w-full flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/40 focus:outline-none resize-none leading-relaxed min-h-[200px]"
 					></textarea>
 					<!-- Attach button -->
 					<input
