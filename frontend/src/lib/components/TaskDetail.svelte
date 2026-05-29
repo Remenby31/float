@@ -2,6 +2,7 @@
 	import { api, type Task, type Attachment } from '$lib/api';
 	import SmartInput from './SmartInput.svelte';
 	import DatePicker from './DatePicker.svelte';
+	import NoteEditor from './NoteEditor.svelte';
 	import type { ParsedTask } from '$lib/smart-input';
 
 	let {
@@ -26,13 +27,13 @@
 	let attachments = $state<Attachment[]>([]);
 	let editingTitle = $state(false);
 	let titleEditValue = $state('');
-	let descriptionText = $state('');
+	let descriptionHtml = $state('');
 	let uploading = $state(false);
 	let fileInput: HTMLInputElement;
 
 	$effect(() => {
 		if (task) {
-			descriptionText = task.description || '';
+			descriptionHtml = task.description || '';
 			titleEditValue = task.title;
 			editingTitle = false;
 			loadAttachments();
@@ -56,9 +57,10 @@
 		editingTitle = false;
 	}
 
-	async function saveDescription() {
+	async function saveDescription(html?: string) {
 		if (!task) return;
-		const updated = await api.updateTask(projectId, task.id, { description: descriptionText || null } as any);
+		const desc = html !== undefined ? html : descriptionHtml;
+		const updated = await api.updateTask(projectId, task.id, { description: desc || null } as any);
 		task = updated;
 		onUpdate(updated);
 	}
@@ -115,36 +117,6 @@
 
 	function close() { task = null; }
 
-	// Subtasks: lines containing @task or @done
-	interface Subtask { lineIdx: number; text: string; done: boolean; }
-
-	let subtasks = $derived.by(() => {
-		if (!descriptionText) return [] as Subtask[];
-		const lines = descriptionText.split('\n');
-		const result: Subtask[] = [];
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i].trim();
-			const taskMatch = line.match(/^@task\s+(.+)$|^(.+)\s+@task$/i);
-			const doneMatch = line.match(/^@done\s+(.+)$|^(.+)\s+@done$/i);
-			if (taskMatch) result.push({ lineIdx: i, text: (taskMatch[1] || taskMatch[2]).trim(), done: false });
-			else if (doneMatch) result.push({ lineIdx: i, text: (doneMatch[1] || doneMatch[2]).trim(), done: true });
-		}
-		return result;
-	});
-
-	function toggleSubtask(st: Subtask) {
-		const lines = descriptionText.split('\n');
-		const line = lines[st.lineIdx].trim();
-		if (st.done) {
-			// @done → @task
-			lines[st.lineIdx] = lines[st.lineIdx].replace(/@done/i, '@task');
-		} else {
-			// @task → @done
-			lines[st.lineIdx] = lines[st.lineIdx].replace(/@task/i, '@done');
-		}
-		descriptionText = lines.join('\n');
-		saveDescription();
-	}
 </script>
 
 {#if task}
@@ -208,44 +180,13 @@
 					<DatePicker value={task.due_date} onchange={onDateChange} />
 				</div>
 
-				<!-- Subtasks -->
-				{#if subtasks.length > 0}
-					{@const pending = subtasks.filter(s => !s.done)}
-					{@const done = subtasks.filter(s => s.done)}
-					<div class="space-y-0.5">
-						{#each pending as st (st.lineIdx)}
-							<button
-								type="button"
-								onclick={() => toggleSubtask(st)}
-								class="subtask-row flex items-center gap-2.5 w-full text-left px-1 py-1 rounded-lg hover:bg-surface/50 transition-colors group"
-							>
-								<span class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all border-border-strong group-hover:border-success"></span>
-								<span class="text-sm text-text">{st.text}</span>
-							</button>
-						{/each}
-						{#each done as st (st.lineIdx)}
-							<button
-								type="button"
-								onclick={() => toggleSubtask(st)}
-								class="subtask-row flex items-center gap-2.5 w-full text-left px-1 py-1 rounded-lg hover:bg-surface/50 transition-colors group opacity-50 hover:opacity-70"
-							>
-								<span class="subtask-check w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center bg-success border-success">
-									<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>
-								</span>
-								<span class="text-sm line-through text-text-muted">{st.text}</span>
-							</button>
-						{/each}
-					</div>
-				{/if}
-
 				<!-- Notes -->
 				<div class="flex-1 flex flex-col relative min-h-0">
-					<textarea
-						bind:value={descriptionText}
-						onblur={saveDescription}
+					<NoteEditor
+						content={descriptionHtml}
 						placeholder="write something..."
-						class="w-full flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/40 focus:outline-none resize-none leading-relaxed min-h-[200px]"
-					></textarea>
+						onSave={(html) => { descriptionHtml = html; saveDescription(html); }}
+					/>
 					<!-- Attach button -->
 					<input
 						bind:this={fileInput}
@@ -314,11 +255,4 @@
 		}
 	}
 	@keyframes spin { to { transform: rotate(360deg); } }
-	.subtask-check { animation: checkPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-	@keyframes checkPop {
-		0% { transform: scale(1); }
-		40% { transform: scale(1.3); }
-		100% { transform: scale(1); }
-	}
-	.subtask-row { transition: opacity 0.2s ease, transform 0.2s ease; }
 </style>

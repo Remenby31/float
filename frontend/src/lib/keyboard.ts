@@ -16,7 +16,7 @@ export function setupKeyboard() {
 	window.addEventListener('keydown', (e) => {
 		// Don't capture when typing in inputs
 		const tag = (e.target as HTMLElement)?.tagName;
-		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) {
 			// Only Escape works in inputs
 			if (e.key === 'Escape') {
 				(e.target as HTMLElement).blur();
