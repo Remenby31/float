@@ -3,8 +3,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 export const TaskMention = Node.create({
 	name: 'taskMention',
-	group: 'inline',
-	inline: true,
+	group: 'block',
 	atom: true,
 
 	addAttributes() {
@@ -15,12 +14,15 @@ export const TaskMention = Node.create({
 	},
 
 	parseHTML() {
-		return [{ tag: 'span[data-type="taskMention"]' }];
+		return [
+			{ tag: 'div[data-type="taskMention"]' },
+			{ tag: 'span[data-type="taskMention"]' },
+		];
 	},
 
 	renderHTML({ HTMLAttributes }) {
 		return [
-			'span',
+			'div',
 			mergeAttributes(HTMLAttributes, { 'data-type': 'taskMention' }),
 			'\u200B',
 		];
@@ -28,23 +30,31 @@ export const TaskMention = Node.create({
 
 	addNodeView(): NodeViewRenderer {
 		return ({ node, editor, getPos }) => {
-			const dom = document.createElement('span');
+			const dom = document.createElement('div');
 			dom.contentEditable = 'false';
 			dom.dataset.type = 'taskMention';
 
+			const checkbox = document.createElement('div');
+			checkbox.className = 'todo-checkbox';
+
+			const label = document.createElement('span');
+			label.className = 'todo-label';
+
+			dom.appendChild(checkbox);
+			dom.appendChild(label);
+
 			function render() {
 				const isDone = node.attrs.id === 'done';
-				dom.className = `task-chip ${isDone ? 'is-done' : ''}`;
-				dom.innerHTML = `<span class="task-chip-check">${
-					isDone
-						? '<svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>'
-						: ''
-				}</span><span class="task-chip-label">${escapeHtml(node.attrs.label)}</span>`;
+				dom.className = `todo-item ${isDone ? 'is-done' : ''}`;
+				checkbox.innerHTML = isDone
+					? '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>'
+					: '';
+				label.textContent = node.attrs.label;
 			}
 
 			render();
 
-			dom.addEventListener('click', (e) => {
+			checkbox.addEventListener('click', (e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				const pos = typeof getPos === 'function' ? getPos() : null;
@@ -95,12 +105,8 @@ export const TaskMention = Node.create({
 
 						const tr = state.tr;
 						tr.delete(lineStart, $from.pos);
-						tr.insert(
-							lineStart,
-							nodeType.create({ id, label })
-						);
-						// Add a new paragraph after the chip
-						tr.split(tr.mapping.map($from.pos));
+						const insertPos = tr.mapping.map(lineStart);
+						tr.insert(insertPos, nodeType.create({ id, label }));
 						view.dispatch(tr);
 						return true;
 					},
@@ -109,7 +115,3 @@ export const TaskMention = Node.create({
 		];
 	},
 });
-
-function escapeHtml(s: string): string {
-	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}

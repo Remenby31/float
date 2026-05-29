@@ -119,51 +119,47 @@
 		font-style: italic;
 	}
 
-	/* Task mention chips */
-	.note-editor :global(.task-chip) {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		padding: 1px 8px 1px 4px;
-		border-radius: 6px;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		cursor: pointer;
+	/* To-do items (Notion style) */
+	.note-editor :global(.todo-item) {
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+		padding: 3px 0;
 		user-select: none;
-		vertical-align: baseline;
-		font-size: 0.8125rem;
-		line-height: 1.5;
-		transition: background-color 0.15s ease, border-color 0.15s ease;
 	}
 
-	.note-editor :global(.task-chip:hover) {
-		border-color: var(--color-border-strong);
-		background: var(--color-elevated);
-	}
-
-	.note-editor :global(.task-chip-check) {
+	.note-editor :global(.todo-checkbox) {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		border: 1.5px solid var(--color-border-strong);
+		width: 16px;
+		height: 16px;
+		margin-top: 2px;
+		border-radius: 3px;
+		border: 1.5px solid var(--color-text-muted);
 		flex-shrink: 0;
+		cursor: pointer;
 		transition: all 0.15s ease;
 	}
 
-	.note-editor :global(.task-chip.is-done .task-chip-check) {
-		background: var(--color-success);
-		border-color: var(--color-success);
+	.note-editor :global(.todo-checkbox:hover) {
+		border-color: var(--color-info);
+		background: var(--color-info)/10;
+	}
+
+	.note-editor :global(.todo-item.is-done .todo-checkbox) {
+		background: var(--color-info);
+		border-color: var(--color-info);
 		color: white;
 	}
 
-	.note-editor :global(.task-chip-label) {
+	.note-editor :global(.todo-label) {
 		color: var(--color-text);
+		font-size: 0.875rem;
+		line-height: 1.625;
 	}
 
-	.note-editor :global(.task-chip.is-done .task-chip-label) {
+	.note-editor :global(.todo-item.is-done .todo-label) {
 		text-decoration: line-through;
 		color: var(--color-text-muted);
 	}

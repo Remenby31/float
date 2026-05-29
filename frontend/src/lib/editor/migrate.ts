@@ -15,13 +15,13 @@ export function migrateToHtml(plainText: string): string {
 			const taskMatch = trimmed.match(TASK_RE);
 			if (taskMatch) {
 				const label = (taskMatch[1] || taskMatch[2]).trim();
-				return `<p><span data-type="taskMention" data-id="task" data-label="${escapeAttr(label)}">\u200B</span></p>`;
+				return `<div data-type="taskMention" data-id="task" data-label="${escapeAttr(label)}">\u200B</div>`;
 			}
 
 			const doneMatch = trimmed.match(DONE_RE);
 			if (doneMatch) {
 				const label = (doneMatch[1] || doneMatch[2]).trim();
-				return `<p><span data-type="taskMention" data-id="done" data-label="${escapeAttr(label)}">\u200B</span></p>`;
+				return `<div data-type="taskMention" data-id="done" data-label="${escapeAttr(label)}">\u200B</div>`;
 			}
 
 			return `<p>${escapeHtml(line)}</p>`;
