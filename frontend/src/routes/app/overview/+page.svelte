@@ -349,7 +349,7 @@
 		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-30"></div>
 		<SmartInput
 			value={val}
-			placeholder="new task... @demain @midi"
+			placeholder="new task..."
 			onSubmit={(parsed) => addTaskFromInput(projectId, parsed)}
 			class="inline-edit flex-1"
 		/>
@@ -362,7 +362,7 @@
 		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-30"></div>
 		<SmartInput
 			value={val}
-			placeholder="new task... @demain @midi"
+			placeholder="new task..."
 			onSubmit={(parsed) => addTaskFromInput(projectId, parsed)}
 			class="inline-edit flex-1"
 		/>

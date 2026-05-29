@@ -85,7 +85,7 @@
 			onblur={() => setTimeout(() => showSuggestions = false, 150)}
 			{placeholder}
 			autofocus={inline}
-			class="{inline ? 'w-full bg-transparent border-b border-text/20 px-0 py-0.5 text-sm text-text placeholder:text-text-muted/60 focus:outline-none transition-all' : 'w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all'} {hasTags && !inline ? 'pr-24' : ''}"
+			class="{inline ? 'w-full bg-transparent border-none px-0 py-1 text-sm text-text placeholder:text-text-muted/30 focus:outline-none transition-all' : 'w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all'} {hasTags && !inline ? 'pr-24' : ''}"
 		/>
 
 		<!-- Inline tag previews -->
