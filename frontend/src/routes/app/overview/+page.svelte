@@ -76,9 +76,12 @@
 		await store.updateTask(task.project_id, task.id, { is_done: !task.is_done });
 	}
 
-	async function addTask(projectId: string, title: string) {
-		if (!title.trim()) return;
-		await store.addTask(projectId, { title: title.trim() });
+	async function addTaskFromInput(projectId: string, parsed: ReturnType<typeof parseInput>) {
+		if (!parsed.title) return;
+		const t = await store.addTask(projectId, { title: parsed.title });
+		if (parsed.due_date) {
+			await store.updateTask(projectId, t.id, { due_date: parsed.due_date } as any);
+		}
 		addInputs[projectId] = '';
 		addInputs = { ...addInputs };
 	}
@@ -341,29 +344,27 @@
 {/snippet}
 
 {#snippet addRow(projectId: string)}
+	{@const val = getInput(projectId)}
 	<div class="flex items-center gap-3 px-4 py-1.5 border-t border-border/50">
 		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-30"></div>
-		<input
-			type="text"
-			value={getInput(projectId)}
-			oninput={(e) => setInput(projectId, (e.target as HTMLInputElement).value)}
-			placeholder="new task..."
-			class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/40 focus:outline-none py-1"
-			onkeydown={(e) => { if (e.key === 'Enter') addTask(projectId, getInput(projectId)); }}
+		<SmartInput
+			value={val}
+			placeholder="new task... @demain @midi"
+			onSubmit={(parsed) => addTaskFromInput(projectId, parsed)}
+			class="inline-edit flex-1"
 		/>
 	</div>
 {/snippet}
 
 {#snippet addRowIndented(projectId: string)}
+	{@const val = getInput(projectId)}
 	<div class="flex items-center gap-3 px-4 py-1.5 pl-6 border-t border-border/30">
 		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-30"></div>
-		<input
-			type="text"
-			value={getInput(projectId)}
-			oninput={(e) => setInput(projectId, (e.target as HTMLInputElement).value)}
-			placeholder="new task..."
-			class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/40 focus:outline-none py-1"
-			onkeydown={(e) => { if (e.key === 'Enter') addTask(projectId, getInput(projectId)); }}
+		<SmartInput
+			value={val}
+			placeholder="new task... @demain @midi"
+			onSubmit={(parsed) => addTaskFromInput(projectId, parsed)}
+			class="inline-edit flex-1"
 		/>
 	</div>
 {/snippet}
