@@ -170,8 +170,13 @@
 	</div>
 {:else}
 <div class="max-w-6xl mx-auto px-6 py-8">
-	<div class="mb-6">
+	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-lg font-semibold tracking-tight">overview</h1>
+		<div class="flex items-center gap-0.5">
+			<button type="button" onclick={() => store.undo()} disabled={!store.canUndo} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all disabled:opacity-15 disabled:pointer-events-none" title="Undo (⌘Z)">
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+			</button>
+		</div>
 	</div>
 
 	<!-- Temporal view -->
