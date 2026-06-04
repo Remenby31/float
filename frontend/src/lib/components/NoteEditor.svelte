@@ -86,11 +86,19 @@
 		width: 100%;
 		flex: 1;
 		min-height: 200px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.note-editor :global(.tiptap) {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
 	}
 
 	.note-editor :global(.ProseMirror) {
 		outline: none;
-		min-height: 200px;
+		flex: 1;
 		font-size: 0.875rem;
 		line-height: 1.625;
 		color: var(--color-text);
