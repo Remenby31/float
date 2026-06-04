@@ -6,12 +6,14 @@
 		placeholder = 'add a task... @demain @midi @lundi',
 		projectNames = [],
 		onSubmit,
+		onBlurSubmit = true,
 		class: className = '',
 	}: {
 		value: string;
 		placeholder?: string;
 		projectNames?: string[];
 		onSubmit?: (parsed: ReturnType<typeof parseInput>) => void;
+		onBlurSubmit?: boolean;
 		class?: string;
 	} = $props();
 
@@ -59,7 +61,7 @@
 		if (e.key === 'Enter' && !showSuggestions && onSubmit) {
 			e.preventDefault();
 			const result = parseInput(value);
-			if (result.title || result.weight || result.due_date) {
+			if (result.title || result.due_date) {
 				onSubmit(result);
 				value = '';
 				showSuggestions = false;
@@ -82,7 +84,16 @@
 			oninput={onInput}
 			onkeydown={onKeydown}
 			onfocus={() => { if (suggestions.length) showSuggestions = true; }}
-			onblur={() => setTimeout(() => showSuggestions = false, 150)}
+			onblur={() => setTimeout(() => {
+				showSuggestions = false;
+				if (onBlurSubmit && onSubmit && value.trim()) {
+					const result = parseInput(value);
+					if (result.title || result.due_date) {
+						onSubmit(result);
+						value = '';
+					}
+				}
+			}, 150)}
 			{placeholder}
 			autofocus={inline}
 			class="{inline ? 'w-full bg-transparent border-none px-0 py-1 text-sm text-text placeholder:text-text-muted/30 focus:outline-none transition-all' : 'w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all'} {hasTags && !inline ? 'pr-24' : ''}"

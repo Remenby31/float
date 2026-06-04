@@ -119,6 +119,98 @@
 		font-style: italic;
 	}
 
+	/* Lists */
+	.note-editor :global(.ProseMirror ul) {
+		list-style-type: disc;
+		padding-left: 1.5em;
+		margin: 0.25em 0;
+	}
+
+	.note-editor :global(.ProseMirror ol) {
+		list-style-type: decimal;
+		padding-left: 1.5em;
+		margin: 0.25em 0;
+	}
+
+	.note-editor :global(.ProseMirror li) {
+		margin: 0.1em 0;
+	}
+
+	.note-editor :global(.ProseMirror li p) {
+		margin: 0;
+	}
+
+	/* Nested lists */
+	.note-editor :global(.ProseMirror ul ul) {
+		list-style-type: circle;
+	}
+
+	.note-editor :global(.ProseMirror ul ul ul) {
+		list-style-type: square;
+	}
+
+	/* Blockquotes */
+	.note-editor :global(.ProseMirror blockquote) {
+		border-left: 3px solid var(--color-border-strong);
+		padding-left: 1em;
+		margin: 0.5em 0;
+		color: var(--color-text-muted);
+	}
+
+	/* Code blocks */
+	.note-editor :global(.ProseMirror pre) {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 0.75em 1em;
+		margin: 0.5em 0;
+		overflow-x: auto;
+	}
+
+	.note-editor :global(.ProseMirror pre code) {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.8125rem;
+		color: var(--color-text);
+		background: none;
+		padding: 0;
+	}
+
+	/* Inline code */
+	.note-editor :global(.ProseMirror code) {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.8125rem;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 4px;
+		padding: 0.1em 0.3em;
+	}
+
+	/* Headings */
+	.note-editor :global(.ProseMirror h1) {
+		font-size: 1.25rem;
+		font-weight: 600;
+		margin: 0.75em 0 0.25em;
+	}
+
+	.note-editor :global(.ProseMirror h2) {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin: 0.5em 0 0.2em;
+	}
+
+	.note-editor :global(.ProseMirror h3) {
+		font-size: 0.95rem;
+		font-weight: 600;
+		margin: 0.4em 0 0.15em;
+	}
+
+	/* Horizontal rule */
+	.note-editor :global(.ProseMirror hr) {
+		border: none;
+		border-top: 1px solid var(--color-border);
+		margin: 1em 0;
+	}
+
 	/* To-do items (Notion style) */
 	.note-editor :global(.todo-item) {
 		display: flex;

@@ -48,6 +48,8 @@ export const api = {
 		request<Task>(`/projects/${projectId}/tasks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 	deleteTask: (projectId: string, id: string) =>
 		request(`/projects/${projectId}/tasks/${id}`, { method: 'DELETE' }),
+	moveTask: (projectId: string, id: string, newProjectId: string) =>
+		request<Task>(`/projects/${projectId}/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ new_project_id: newProjectId }) }),
 	reorderTasks: (projectId: string, taskIds: string[]) =>
 		request(`/projects/${projectId}/tasks/reorder`, { method: 'PUT', body: JSON.stringify({ task_ids: taskIds }) }),
 

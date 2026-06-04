@@ -35,6 +35,7 @@ struct UpdateTask {
     position: Option<i32>,
     is_done: Option<bool>,
     due_date: Option<Option<chrono::DateTime<chrono::Utc>>>,
+    new_project_id: Option<Uuid>,
 }
 
 #[derive(Deserialize)]
@@ -163,6 +164,10 @@ async fn update(
     if let Some(weight) = input.weight { active.weight = Set(weight); }
     if let Some(pos) = input.position { active.position = Set(pos); }
     if let Some(due) = input.due_date { active.due_date = Set(due.map(Into::into)); }
+    if let Some(new_pid) = input.new_project_id {
+        verify_project_owner(&state.db, new_pid, auth.user_id).await?;
+        active.project_id = Set(new_pid);
+    }
     if let Some(is_done) = input.is_done {
         active.is_done = Set(is_done);
         active.done_at = Set(if is_done { Some(chrono::Utc::now().into()) } else { None });

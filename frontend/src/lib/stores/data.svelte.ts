@@ -58,6 +58,12 @@ export function getDataStore() {
 		return updated;
 	}
 
+	async function moveTask(fromProjectId: string, taskId: string, toProjectId: string) {
+		const updated = await api.moveTask(fromProjectId, taskId, toProjectId);
+		allTasks = allTasks.map(t => t.id === taskId ? updated : t);
+		return updated;
+	}
+
 	async function deleteTask(projectId: string, id: string) {
 		await api.deleteTask(projectId, id);
 		allTasks = allTasks.filter(t => t.id !== id);
@@ -87,6 +93,7 @@ export function getDataStore() {
 		deleteProject,
 		addTask,
 		updateTask,
+		moveTask,
 		deleteTask,
 		tasksForProject,
 		reset,

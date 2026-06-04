@@ -157,7 +157,7 @@
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<h3
-							class="text-lg font-medium cursor-text hover:text-text-secondary transition-colors leading-snug truncate {task.is_done ? 'line-through text-text-muted' : ''}"
+							class="text-lg font-medium cursor-text hover:text-text-secondary transition-colors leading-snug {task.is_done ? 'line-through text-text-muted' : ''}"
 							onclick={() => { editingTitle = true; titleEditValue = task?.title || ''; }}
 						>{task.title}</h3>
 					{/if}

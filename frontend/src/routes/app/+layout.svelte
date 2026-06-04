@@ -155,8 +155,8 @@
 		<nav class="flex-1 p-2 pt-3 space-y-0.5 overflow-y-auto">
 			<!-- Overview + Search -->
 			<a
-				href="/app/overview"
-				class="flex items-center gap-2 px-2.5 py-2.5 md:py-1.5 rounded-lg text-sm transition-all {page.url.pathname === '/app/overview' ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50 hover:text-text'}"
+				href="/app"
+				class="flex items-center gap-2 px-2.5 py-2.5 md:py-1.5 rounded-lg text-sm transition-all {page.url.pathname === '/app' ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50 hover:text-text'}"
 			>
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 				overview
@@ -197,7 +197,7 @@
 								<span class="truncate">{grp.title}</span>
 							</a>
 						{/if}
-						<div class="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+						<div class="hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
 							<button
 								type="button"
 								onclick={() => startAdding(grp.id)}
@@ -235,7 +235,7 @@
 								<button
 									type="button"
 									onclick={() => askDeleteProject(child.id)}
-									class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-danger rounded md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+									class="w-5 h-5 hidden md:flex items-center justify-center text-text-muted hover:text-danger rounded opacity-0 group-hover:opacity-100 transition-opacity"
 									title="delete"
 								>
 									<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

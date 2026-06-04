@@ -6,10 +6,18 @@ export const TabIndent = Extension.create({
 	addKeyboardShortcuts() {
 		return {
 			Tab: () => {
+				// If inside a list, use native list sink (indent)
+				if (this.editor.isActive('listItem')) {
+					return this.editor.commands.sinkListItem('listItem');
+				}
 				this.editor.commands.insertContent('\t');
 				return true;
 			},
 			'Shift-Tab': () => {
+				// If inside a list, use native list lift (outdent)
+				if (this.editor.isActive('listItem')) {
+					return this.editor.commands.liftListItem('listItem');
+				}
 				const { state, dispatch } = this.editor.view;
 				const { $from } = state.selection;
 				const lineStart = $from.start();
