@@ -199,11 +199,11 @@
 						type="button"
 						onclick={() => fileInput?.click()}
 						disabled={uploading}
-						class="absolute bottom-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center text-text-muted/40 hover:text-text-muted hover:bg-surface/80 transition-all"
+						class="absolute bottom-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center text-text-muted/60 hover:text-text-muted hover:bg-surface/80 transition-all"
 						title="attach file"
 					>
 						{#if uploading}
-							<span class="w-3 h-3 border-2 border-text-muted/30 border-t-text-muted rounded-full animate-spin"></span>
+							<span class="w-3 h-3 border-2 border-text-muted/40 border-t-text-muted rounded-full animate-spin"></span>
 						{:else}
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
 						{/if}

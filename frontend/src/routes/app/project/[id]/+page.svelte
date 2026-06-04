@@ -130,7 +130,7 @@
 
 {#if !store.initialized}
 	<div class="flex items-center justify-center h-full">
-		<div class="w-5 h-5 border-2 border-text-muted/30 border-t-text-muted rounded-full animate-spin"></div>
+		<div class="w-5 h-5 border-2 border-text-muted/40 border-t-text-muted rounded-full animate-spin"></div>
 	</div>
 {:else if project}
 <div class="max-w-3xl mx-auto px-6 py-8">
@@ -169,7 +169,7 @@
 	{:else if pendingTasks.length === 0 && tasks.length === 0}
 		<div class="text-center py-16">
 			<p class="text-text-muted text-sm">empty bucket</p>
-			<p class="text-text-muted/50 text-xs mt-1">add your first task above</p>
+			<p class="text-text-muted/70 text-xs mt-1">add your first task above</p>
 		</div>
 	{:else}
 		<div class="space-y-0.5">
@@ -223,7 +223,7 @@
 
 	{#if doneTasks.length > 0 || olderDoneTasks.length > 0}
 		{#each doneTasks as task (task.id)}
-			<div class="flex items-center gap-3 px-3 py-2 rounded-xl opacity-40 hover:opacity-60 transition-opacity group">
+			<div class="flex items-center gap-3 px-3 py-2 rounded-xl opacity-50 hover:opacity-70 transition-opacity group">
 				<button
 					type="button"
 					onclick={() => toggleDone(task)}
@@ -243,7 +243,7 @@
 			</summary>
 			<div class="mt-1 space-y-0.5">
 				{#each olderDoneTasks as task (task.id)}
-					<div class="flex items-center gap-3 px-3 py-2 rounded-xl opacity-40 hover:opacity-60 transition-opacity group">
+					<div class="flex items-center gap-3 px-3 py-2 rounded-xl opacity-50 hover:opacity-70 transition-opacity group">
 						<button
 							type="button"
 							onclick={() => toggleDone(task)}

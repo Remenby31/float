@@ -172,7 +172,7 @@
 
 {#if !store.initialized}
 	<div class="flex items-center justify-center h-full">
-		<div class="w-5 h-5 border-2 border-text-muted/30 border-t-text-muted rounded-full animate-spin"></div>
+		<div class="w-5 h-5 border-2 border-text-muted/40 border-t-text-muted rounded-full animate-spin"></div>
 	</div>
 {:else}
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -453,7 +453,7 @@
 {#snippet addRow(projectId: string)}
 	{@const val = getInput(projectId)}
 	<div class="flex items-center gap-3 px-4 py-1.5 border-t border-border/50">
-		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-30"></div>
+		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-50"></div>
 		<SmartInput
 			value={val}
 			placeholder="new task..."
@@ -466,7 +466,7 @@
 {#snippet addRowIndented(projectId: string)}
 	{@const val = getInput(projectId)}
 	<div class="flex items-center gap-3 px-4 py-1.5 pl-6 border-t border-border/30">
-		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-30"></div>
+		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-50"></div>
 		<SmartInput
 			value={val}
 			placeholder="new task..."

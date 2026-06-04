@@ -247,7 +247,7 @@
 								<div class="px-3 py-0.5" onclick={() => navigate(r)}>
 									<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors {flatIndex(r) === selectedIdx ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}">
 										<span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-text-muted"></span>
-										<span class="text-sm truncate {r.isDone ? 'line-through opacity-40' : ''}">{r.title}</span>
+										<span class="text-sm truncate {r.isDone ? 'line-through opacity-50' : ''}">{r.title}</span>
 										{#if r.projectName}
 											<span class="text-[10px] text-text-muted ml-auto truncate max-w-[120px] flex-shrink-0">{r.projectName}</span>
 										{/if}
