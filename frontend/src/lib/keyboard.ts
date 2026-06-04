@@ -34,6 +34,12 @@ export function setupKeyboard() {
 			return;
 		}
 
+		if (mod && key === 'z' && !e.shiftKey) {
+			e.preventDefault();
+			fire('cmd+z');
+			return;
+		}
+
 		if (key === 'n') { fire('n'); return; }
 		if (key === '1') { fire('1'); return; }
 		if (key === '2') { fire('2'); return; }

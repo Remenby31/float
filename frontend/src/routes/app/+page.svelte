@@ -94,12 +94,17 @@
 	}
 
 	function startEditing(task: Task) {
+		// Save previous inline edit before switching
+		if (editingTaskId && editingTaskId !== task.id) {
+			const prev = store.allTasks.find(t => t.id === editingTaskId);
+			if (prev) saveInlineEdit(prev);
+		}
 		editingTaskId = task.id;
 		editingTaskValue = task.title;
 	}
 
 	async function saveInlineEdit(task: Task, parsed?: ReturnType<typeof parseInput>) {
-		editingTaskId = null;
+		if (editingTaskId === task.id) editingTaskId = null;
 		if (!parsed) parsed = parseInput(editingTaskValue);
 		const updates: any = {};
 		if (parsed.title && parsed.title !== task.title) updates.title = parsed.title;
@@ -208,6 +213,7 @@
 												bind:value={editingTaskValue}
 												placeholder={dt.task.title}
 												onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)}
+												onBlurSubmit={false}
 												class="inline-edit"
 											/>
 										</div>
@@ -328,7 +334,7 @@
 
 {#snippet taskRow(task: Task)}
 	<div
-		class="flex items-center gap-3 px-4 py-2 hover:bg-surface/30 transition-colors group cursor-grab active:cursor-grabbing"
+		class="flex items-start gap-3 px-4 py-2 hover:bg-surface/30 transition-colors group cursor-grab active:cursor-grabbing"
 		draggable="true"
 		ondragstart={() => onDragStart(task)}
 		ondragend={onDragEnd}
@@ -336,7 +342,7 @@
 		<button
 			type="button"
 			onclick={() => toggleDone(task)}
-			class="w-4 h-4 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
+			class="w-4 h-4 mt-0.5 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
 			style={task.is_done ? '' : 'border-color:var(--color-border-strong)'}
 		>
 			{#if task.is_done}
@@ -349,6 +355,7 @@
 					bind:value={editingTaskValue}
 					placeholder={task.title}
 					onSubmit={(parsed) => saveInlineEdit(task, parsed)}
+					onBlurSubmit={false}
 					class="inline-edit"
 				/>
 			</div>
@@ -382,7 +389,7 @@
 		<button
 			type="button"
 			onclick={() => toggleDone(task)}
-			class="w-4 h-4 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
+			class="w-4 h-4 mt-0.5 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
 			style={task.is_done ? '' : 'border-color:var(--color-border-strong)'}
 		>
 			{#if task.is_done}
@@ -395,6 +402,7 @@
 					bind:value={editingTaskValue}
 					placeholder={task.title}
 					onSubmit={(parsed) => saveInlineEdit(task, parsed)}
+					onBlurSubmit={false}
 					class="inline-edit"
 				/>
 			</div>

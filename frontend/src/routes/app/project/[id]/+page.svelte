@@ -25,7 +25,18 @@
 	let project = $derived(store.projects.find(p => p.id === projectId) || null);
 	let tasks = $derived(store.tasksForProject(projectId));
 	let pendingTasks = $derived(tasks.filter(t => !t.is_done));
-	let doneTasks = $derived(tasks.filter(t => t.is_done));
+	let allDoneTasks = $derived(tasks.filter(t => t.is_done));
+	// Only show recently completed tasks (today/yesterday); older ones go straight to collapsed
+	let doneTasks = $derived.by(() => {
+		const yesterday = new Date();
+		yesterday.setDate(yesterday.getDate() - 1);
+		yesterday.setHours(0, 0, 0, 0);
+		return allDoneTasks.filter(t => {
+			if (!t.done_at) return true; // no timestamp = show
+			return new Date(t.done_at) >= yesterday;
+		});
+	});
+	let olderDoneTasks = $derived(allDoneTasks.filter(t => !doneTasks.includes(t)));
 	let isFloating = $derived(pendingTasks.length === 0 && tasks.length > 0);
 
 	async function addTask(parsed: ParsedTask) {
@@ -34,7 +45,25 @@
 		if (parsed.due_date) {
 			await store.updateTask(project.id, t.id, { due_date: parsed.due_date } as any);
 		}
+		input = '';
 	}
+
+	// Live create: when user types in the main input (non-@ text), create task immediately
+	let liveCreating = false;
+	$effect(() => {
+		if (input && !input.startsWith('@') && !liveCreating && project) {
+			const trimmed = input.trim();
+			if (trimmed.length >= 1 && !trimmed.startsWith('@')) {
+				liveCreating = true;
+				store.addTask(project.id, { title: trimmed }).then(t => {
+					input = '';
+					editingTaskId = t.id;
+					editingTaskValue = trimmed;
+					liveCreating = false;
+				});
+			}
+		}
+	});
 
 	async function toggleDone(task: Task) {
 		if (!project) return;
@@ -46,15 +75,20 @@
 		await store.deleteTask(project.id, task.id);
 	}
 
+	import { parseInput } from '$lib/smart-input';
+
 	function startEditing(task: Task) {
+		// Save previous inline edit before switching
+		if (editingTaskId && editingTaskId !== task.id) {
+			const prev = tasks.find(t => t.id === editingTaskId);
+			if (prev) saveInlineEdit(prev);
+		}
 		editingTaskId = task.id;
 		editingTaskValue = task.title;
 	}
 
-	import { parseInput } from '$lib/smart-input';
-
 	async function saveInlineEdit(task: Task, parsed?: ReturnType<typeof parseInput>) {
-		editingTaskId = null;
+		if (editingTaskId === task.id) editingTaskId = null;
 		if (!parsed) parsed = parseInput(editingTaskValue);
 		const updates: any = {};
 		if (parsed.title && parsed.title !== task.title) updates.title = parsed.title;
@@ -62,6 +96,29 @@
 		if (Object.keys(updates).length === 0) return;
 		await store.updateTask(project!.id, task.id, updates);
 	}
+
+	// Debounced auto-save while editing inline
+	let saveTimer: ReturnType<typeof setTimeout>;
+	$effect(() => {
+		if (editingTaskId && editingTaskValue) {
+			clearTimeout(saveTimer);
+			const taskId = editingTaskId;
+			const val = editingTaskValue;
+			saveTimer = setTimeout(() => {
+				const task = tasks.find(t => t.id === taskId);
+				if (task && val.trim() && val.trim() !== task.title) {
+					const parsed = parseInput(val);
+					const updates: any = {};
+					if (parsed.title && parsed.title !== task.title) updates.title = parsed.title;
+					if (parsed.due_date) updates.due_date = parsed.due_date;
+					if (Object.keys(updates).length > 0) {
+						store.updateTask(project!.id, taskId, updates);
+					}
+				}
+			}, 500);
+		}
+		return () => clearTimeout(saveTimer);
+	});
 
 	function onTaskUpdate() {
 		store.refreshTasks();
@@ -111,13 +168,13 @@
 		<div class="space-y-0.5">
 			{#each pendingTasks as task, i (task.id)}
 				<div
-					class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface/50 transition-all group task-row"
+					class="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-surface/50 transition-all group task-row"
 					style="animation-delay: {i * 30}ms"
 				>
 					<button
 						type="button"
 						onclick={() => toggleDone(task)}
-						class="check-btn w-[18px] h-[18px] rounded-full border-2 border-border-strong flex-shrink-0 transition-all flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
+						class="check-btn w-[18px] h-[18px] mt-0.5 rounded-full border-2 border-border-strong flex-shrink-0 transition-all flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
 					>
 						<svg class="check-icon w-2.5 h-2.5 opacity-0 transition-opacity" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 							<polyline points="2,6 5,9 10,3"/>
@@ -129,6 +186,7 @@
 								bind:value={editingTaskValue}
 								placeholder={task.title}
 								onSubmit={(parsed) => saveInlineEdit(task, parsed)}
+								onBlurSubmit={false}
 								class="inline-edit"
 							/>
 						</div>
@@ -156,13 +214,28 @@
 		</div>
 	{/if}
 
-	{#if doneTasks.length > 0}
-		<details class="mt-6">
+	{#if doneTasks.length > 0 || olderDoneTasks.length > 0}
+		{#each doneTasks as task (task.id)}
+			<div class="flex items-center gap-3 px-3 py-2 rounded-xl opacity-40 hover:opacity-60 transition-opacity group">
+				<button
+					type="button"
+					onclick={() => toggleDone(task)}
+					class="w-[18px] h-[18px] rounded-full bg-success flex-shrink-0 flex items-center justify-center"
+				>
+					<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="2,6 5,9 10,3"/>
+					</svg>
+				</button>
+				<span class="flex-1 text-sm line-through">{task.title}</span>
+			</div>
+		{/each}
+		{#if olderDoneTasks.length > 0}
+		<details class="mt-2">
 			<summary class="text-xs text-text-muted cursor-pointer hover:text-text-secondary px-3 py-1 select-none">
-				{doneTasks.length} completed
+				{olderDoneTasks.length} completed
 			</summary>
 			<div class="mt-1 space-y-0.5">
-				{#each doneTasks as task (task.id)}
+				{#each olderDoneTasks as task (task.id)}
 					<div class="flex items-center gap-3 px-3 py-2 rounded-xl opacity-40 hover:opacity-60 transition-opacity group">
 						<button
 							type="button"
@@ -178,6 +251,7 @@
 				{/each}
 			</div>
 		</details>
+	{/if}
 	{/if}
 </div>
 {/if}

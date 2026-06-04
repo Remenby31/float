@@ -41,6 +41,7 @@
 		theme.init();
 		setupKeyboard();
 		unsubs.push(onShortcut('cmd+k', () => { cmdOpen = !cmdOpen; }));
+		unsubs.push(onShortcut('cmd+z', () => { store.undo(); }));
 		try {
 			const user = await api.me();
 			username = user.username;
@@ -151,8 +152,20 @@
 		style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px)"
 		onclick={(e) => { if ((e.target as HTMLElement).closest('a')) sidebarOpen = false; }}
 	>
-		<!-- Nav -->
-		<nav class="flex-1 p-2 pt-3 space-y-0.5 overflow-y-auto">
+		<!-- Nav history + undo -->
+		<div class="flex items-center gap-1 px-2 pt-3 pb-1">
+			<button type="button" onclick={() => history.back()} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all" title="Back">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+			</button>
+			<button type="button" onclick={() => history.forward()} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all" title="Forward">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+			</button>
+			<button type="button" onclick={() => store.undo()} disabled={!store.canUndo} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all disabled:opacity-20 disabled:pointer-events-none ml-auto" title="Undo (⌘Z)">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+			</button>
+		</div>
+
+		<nav class="flex-1 p-2 pt-1 space-y-0.5 overflow-y-auto">
 			<!-- Overview + Search -->
 			<a
 				href="/app"

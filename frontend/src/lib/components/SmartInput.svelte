@@ -20,7 +20,7 @@
 	let suggestions = $state<Suggestion[]>([]);
 	let selectedIdx = $state(0);
 	let showSuggestions = $state(false);
-	let inputEl: HTMLInputElement;
+	let inputEl: HTMLInputElement | HTMLTextAreaElement;
 	let inline = $derived(className.includes('inline-edit'));
 
 	// Parsed preview of current input
@@ -69,6 +69,13 @@
 		}
 	}
 
+	function autoResize() {
+		if (inputEl && inputEl instanceof HTMLTextAreaElement) {
+			inputEl.style.height = 'auto';
+			inputEl.style.height = inputEl.scrollHeight + 'px';
+		}
+	}
+
 	function typeIcon(type: string) {
 		if (type === 'date') return 'date';
 		if (type === 'time') return 'time';
@@ -78,26 +85,49 @@
 
 <div class="relative {className}">
 	<div class="relative">
-		<input
-			bind:this={inputEl}
-			bind:value={value}
-			oninput={onInput}
-			onkeydown={onKeydown}
-			onfocus={() => { if (suggestions.length) showSuggestions = true; }}
-			onblur={() => setTimeout(() => {
-				showSuggestions = false;
-				if (onBlurSubmit && onSubmit && value.trim()) {
-					const result = parseInput(value);
-					if (result.title || result.due_date) {
-						onSubmit(result);
-						value = '';
+		{#if inline}
+			<textarea
+				bind:this={inputEl}
+				bind:value={value}
+				oninput={() => { onInput(); autoResize(); }}
+				onkeydown={onKeydown}
+				onfocus={() => { if (suggestions.length) showSuggestions = true; }}
+				onblur={() => setTimeout(() => {
+					showSuggestions = false;
+					if (onBlurSubmit && onSubmit && value.trim()) {
+						const result = parseInput(value);
+						if (result.title || result.due_date) {
+							onSubmit(result);
+							value = '';
+						}
 					}
-				}
-			}, 150)}
-			{placeholder}
-			autofocus={inline}
-			class="{inline ? 'w-full bg-transparent border-none px-0 py-1 text-sm text-text placeholder:text-text-muted/30 focus:outline-none transition-all' : 'w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all'} {hasTags && !inline ? 'pr-24' : ''}"
-		/>
+				}, 150)}
+				{placeholder}
+				autofocus
+				rows="1"
+				class="w-full bg-transparent border-none px-0 py-1 text-sm text-text placeholder:text-text-muted/30 focus:outline-none transition-all resize-none overflow-hidden"
+			></textarea>
+		{:else}
+			<input
+				bind:this={inputEl}
+				bind:value={value}
+				oninput={onInput}
+				onkeydown={onKeydown}
+				onfocus={() => { if (suggestions.length) showSuggestions = true; }}
+				onblur={() => setTimeout(() => {
+					showSuggestions = false;
+					if (onBlurSubmit && onSubmit && value.trim()) {
+						const result = parseInput(value);
+						if (result.title || result.due_date) {
+							onSubmit(result);
+							value = '';
+						}
+					}
+				}, 150)}
+				{placeholder}
+				class="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-text/8 focus:border-border-strong transition-all {hasTags ? 'pr-24' : ''}"
+			/>
+		{/if}
 
 		<!-- Inline tag previews -->
 		{#if hasTags && !inline}

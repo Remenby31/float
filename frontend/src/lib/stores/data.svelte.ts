@@ -4,6 +4,9 @@ let projects = $state<Project[]>([]);
 let allTasks = $state<Task[]>([]);
 let initialized = $state(false);
 
+type UndoAction = () => Promise<void>;
+let undoStack: UndoAction[] = [];
+
 export function getDataStore() {
 	async function init() {
 		if (initialized) return;
@@ -52,21 +55,51 @@ export function getDataStore() {
 		return t;
 	}
 
+	function pushUndo(action: UndoAction) {
+		undoStack.push(action);
+		if (undoStack.length > 30) undoStack.shift();
+	}
+
+	async function undo() {
+		const action = undoStack.pop();
+		if (action) await action();
+	}
+
 	async function updateTask(projectId: string, id: string, data: Partial<Task>) {
+		const prev = allTasks.find(t => t.id === id);
 		const updated = await api.updateTask(projectId, id, data);
 		allTasks = allTasks.map(t => t.id === id ? updated : t);
+		if (prev && data.is_done !== undefined) {
+			pushUndo(async () => {
+				const reverted = await api.updateTask(projectId, id, { is_done: prev.is_done });
+				allTasks = allTasks.map(t => t.id === id ? reverted : t);
+			});
+		}
 		return updated;
 	}
 
 	async function moveTask(fromProjectId: string, taskId: string, toProjectId: string) {
 		const updated = await api.moveTask(fromProjectId, taskId, toProjectId);
 		allTasks = allTasks.map(t => t.id === taskId ? updated : t);
+		pushUndo(async () => {
+			const reverted = await api.moveTask(toProjectId, taskId, fromProjectId);
+			allTasks = allTasks.map(t => t.id === taskId ? reverted : t);
+		});
 		return updated;
 	}
 
 	async function deleteTask(projectId: string, id: string) {
+		const deleted = allTasks.find(t => t.id === id);
 		await api.deleteTask(projectId, id);
 		allTasks = allTasks.filter(t => t.id !== id);
+		if (deleted) {
+			pushUndo(async () => {
+				const restored = await api.createTask(projectId, { title: deleted.title, description: deleted.description || undefined });
+				if (deleted.due_date) await api.updateTask(projectId, restored.id, { due_date: deleted.due_date } as any);
+				if (deleted.is_done) await api.updateTask(projectId, restored.id, { is_done: true });
+				allTasks = await api.listAllTasks();
+			});
+		}
 	}
 
 	// Derived helpers
@@ -95,6 +128,8 @@ export function getDataStore() {
 		updateTask,
 		moveTask,
 		deleteTask,
+		undo,
+		get canUndo() { return undoStack.length > 0; },
 		tasksForProject,
 		reset,
 	};
