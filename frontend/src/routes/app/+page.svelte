@@ -6,6 +6,7 @@
 	import { parseInput } from '$lib/smart-input';
 	import { relativeDate } from '$lib/utils';
 	import { getDataStore } from '$lib/stores/data.svelte';
+	import { touchDrag } from '$lib/touch-dnd';
 
 	const store = getDataStore();
 	let selectedTask = $state<Task | null>(null);
@@ -154,6 +155,11 @@
 		dragTask = null;
 	}
 
+	async function onTouchDrop(e: CustomEvent<{ taskId: string; fromProjectId: string; toProjectId: string }>) {
+		const { taskId, fromProjectId, toProjectId } = e.detail;
+		await store.moveTask(fromProjectId, taskId, toProjectId);
+	}
+
 	function getInput(pid: string): string {
 		return addInputs[pid] || '';
 	}
@@ -175,6 +181,9 @@
 		<div class="flex items-center gap-0.5">
 			<button type="button" onclick={() => store.undo()} disabled={!store.canUndo} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all disabled:opacity-15 disabled:pointer-events-none" title="Undo (⌘Z)">
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+			</button>
+			<button type="button" onclick={() => store.redo()} disabled={!store.canRedo} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all disabled:opacity-15 disabled:pointer-events-none" title="Redo (⌘⇧Z)">
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg>
 			</button>
 		</div>
 	</div>
@@ -205,6 +214,8 @@
 									draggable="true"
 									ondragstart={() => onDragStart(dt.task)}
 									ondragend={onDragEnd}
+									use:touchDrag={{ taskId: dt.task.id, projectId: dt.task.project_id }}
+									ontouchdrop={(e) => onTouchDrop(e)}
 								>
 									<button
 										type="button"
@@ -267,6 +278,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<section
 				class="border rounded-xl overflow-hidden break-inside-avoid transition-colors {dropTargetId === grp.id && children.length === 0 ? 'border-accent ring-2 ring-accent/20' : 'border-border'}"
+				data-drop-project={children.length === 0 ? grp.id : undefined}
 				ondragover={(e) => { if (children.length === 0) onDragOver(e, grp.id); }}
 				ondragleave={() => { if (children.length === 0) onDragLeave(grp.id); }}
 				ondrop={(e) => { if (children.length === 0) onDrop(e, grp.id); }}
@@ -287,6 +299,7 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
 							class="border-t transition-colors {dropTargetId === child.id ? 'border-accent bg-accent/5' : 'border-border'}"
+							data-drop-project={child.id}
 							ondragover={(e) => onDragOver(e, child.id)}
 							ondragleave={() => onDragLeave(child.id)}
 							ondrop={(e) => onDrop(e, child.id)}
@@ -338,11 +351,14 @@
 {/snippet}
 
 {#snippet taskRow(task: Task)}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="flex items-start gap-3 px-4 py-2 hover:bg-surface/30 transition-colors group cursor-grab active:cursor-grabbing"
 		draggable="true"
 		ondragstart={() => onDragStart(task)}
 		ondragend={onDragEnd}
+		use:touchDrag={{ taskId: task.id, projectId: task.project_id }}
+		ontouchdrop={(e) => onTouchDrop(e)}
 	>
 		<button
 			type="button"
@@ -385,11 +401,14 @@
 {/snippet}
 
 {#snippet taskRowIndented(task: Task)}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="flex items-center gap-3 px-4 py-2 pl-6 hover:bg-surface/30 transition-colors group cursor-grab active:cursor-grabbing"
+		class="flex items-start gap-3 px-4 py-2 pl-6 hover:bg-surface/30 transition-colors group cursor-grab active:cursor-grabbing"
 		draggable="true"
 		ondragstart={() => onDragStart(task)}
 		ondragend={onDragEnd}
+		use:touchDrag={{ taskId: task.id, projectId: task.project_id }}
+		ontouchdrop={(e) => onTouchDrop(e)}
 	>
 		<button
 			type="button"

@@ -42,6 +42,7 @@
 		setupKeyboard();
 		unsubs.push(onShortcut('cmd+k', () => { cmdOpen = !cmdOpen; }));
 		unsubs.push(onShortcut('cmd+z', () => { store.undo(); }));
+		unsubs.push(onShortcut('cmd+shift+z', () => { store.redo(); }));
 		try {
 			const user = await api.me();
 			username = user.username;

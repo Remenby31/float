@@ -48,22 +48,20 @@
 		input = '';
 	}
 
-	// Live create: when user types in the main input (non-@ text), create task immediately
+	// Live create: first non-@ keystroke creates task, then switches to inline edit
 	let liveCreating = false;
-	$effect(() => {
-		if (input && !input.startsWith('@') && !liveCreating && project) {
-			const trimmed = input.trim();
-			if (trimmed.length >= 1 && !trimmed.startsWith('@')) {
-				liveCreating = true;
-				store.addTask(project.id, { title: trimmed }).then(t => {
-					input = '';
-					editingTaskId = t.id;
-					editingTaskValue = trimmed;
-					liveCreating = false;
-				});
-			}
+	async function handleLiveInput(val: string) {
+		if (liveCreating || !project || !val.trim() || val.startsWith('@')) return;
+		liveCreating = true;
+		try {
+			const t = await store.addTask(project.id, { title: val.trim() });
+			input = '';
+			editingTaskId = t.id;
+			editingTaskValue = val.trim();
+		} finally {
+			liveCreating = false;
 		}
-	});
+	}
 
 	async function toggleDone(task: Task) {
 		if (!project) return;
@@ -149,6 +147,9 @@
 			<button type="button" onclick={() => store.undo()} disabled={!store.canUndo} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all disabled:opacity-15 disabled:pointer-events-none" title="Undo (⌘Z)">
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
 			</button>
+			<button type="button" onclick={() => store.redo()} disabled={!store.canRedo} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all disabled:opacity-15 disabled:pointer-events-none" title="Redo (⌘⇧Z)">
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg>
+			</button>
 		</div>
 	</div>
 
@@ -156,6 +157,7 @@
 		bind:value={input}
 		placeholder="add a task... @demain @15h"
 		onSubmit={addTask}
+		onLiveInput={handleLiveInput}
 		class="mb-6"
 	/>
 

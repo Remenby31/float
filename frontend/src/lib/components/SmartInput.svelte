@@ -7,6 +7,7 @@
 		projectNames = [],
 		onSubmit,
 		onBlurSubmit = true,
+		onLiveInput,
 		class: className = '',
 	}: {
 		value: string;
@@ -14,6 +15,7 @@
 		projectNames?: string[];
 		onSubmit?: (parsed: ReturnType<typeof parseInput>) => void;
 		onBlurSubmit?: boolean;
+		onLiveInput?: (value: string) => void;
 		class?: string;
 	} = $props();
 
@@ -111,7 +113,7 @@
 			<input
 				bind:this={inputEl}
 				bind:value={value}
-				oninput={onInput}
+				oninput={() => { onInput(); onLiveInput?.(value); }}
 				onkeydown={onKeydown}
 				onfocus={() => { if (suggestions.length) showSuggestions = true; }}
 				onblur={() => setTimeout(() => {

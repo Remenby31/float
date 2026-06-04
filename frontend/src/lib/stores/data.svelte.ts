@@ -4,8 +4,9 @@ let projects = $state<Project[]>([]);
 let allTasks = $state<Task[]>([]);
 let initialized = $state(false);
 
-type UndoAction = () => Promise<void>;
+type UndoAction = { do: () => Promise<void>; undo: () => Promise<void> };
 let undoStack: UndoAction[] = [];
+let redoStack: UndoAction[] = [];
 
 export function getDataStore() {
 	async function init() {
@@ -55,14 +56,24 @@ export function getDataStore() {
 		return t;
 	}
 
-	function pushUndo(action: UndoAction) {
-		undoStack.push(action);
+	function pushUndo(doFn: () => Promise<void>, undoFn: () => Promise<void>) {
+		undoStack.push({ do: doFn, undo: undoFn });
 		if (undoStack.length > 30) undoStack.shift();
+		redoStack.length = 0; // new action clears redo
 	}
 
 	async function undo() {
 		const action = undoStack.pop();
-		if (action) await action();
+		if (!action) return;
+		await action.undo();
+		redoStack.push(action);
+	}
+
+	async function redo() {
+		const action = redoStack.pop();
+		if (!action) return;
+		await action.do();
+		undoStack.push(action);
 	}
 
 	async function updateTask(projectId: string, id: string, data: Partial<Task>) {
@@ -70,10 +81,10 @@ export function getDataStore() {
 		const updated = await api.updateTask(projectId, id, data);
 		allTasks = allTasks.map(t => t.id === id ? updated : t);
 		if (prev && data.is_done !== undefined) {
-			pushUndo(async () => {
-				const reverted = await api.updateTask(projectId, id, { is_done: prev.is_done });
-				allTasks = allTasks.map(t => t.id === id ? reverted : t);
-			});
+			pushUndo(
+				async () => { const r = await api.updateTask(projectId, id, { is_done: data.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
+				async () => { const r = await api.updateTask(projectId, id, { is_done: prev.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
+			);
 		}
 		return updated;
 	}
@@ -81,10 +92,10 @@ export function getDataStore() {
 	async function moveTask(fromProjectId: string, taskId: string, toProjectId: string) {
 		const updated = await api.moveTask(fromProjectId, taskId, toProjectId);
 		allTasks = allTasks.map(t => t.id === taskId ? updated : t);
-		pushUndo(async () => {
-			const reverted = await api.moveTask(toProjectId, taskId, fromProjectId);
-			allTasks = allTasks.map(t => t.id === taskId ? reverted : t);
-		});
+		pushUndo(
+			async () => { const r = await api.moveTask(fromProjectId, taskId, toProjectId); allTasks = allTasks.map(t => t.id === taskId ? r : t); },
+			async () => { const r = await api.moveTask(toProjectId, taskId, fromProjectId); allTasks = allTasks.map(t => t.id === taskId ? r : t); },
+		);
 		return updated;
 	}
 
@@ -93,12 +104,17 @@ export function getDataStore() {
 		await api.deleteTask(projectId, id);
 		allTasks = allTasks.filter(t => t.id !== id);
 		if (deleted) {
-			pushUndo(async () => {
-				const restored = await api.createTask(projectId, { title: deleted.title, description: deleted.description || undefined });
-				if (deleted.due_date) await api.updateTask(projectId, restored.id, { due_date: deleted.due_date } as any);
-				if (deleted.is_done) await api.updateTask(projectId, restored.id, { is_done: true });
-				allTasks = await api.listAllTasks();
-			});
+			let restoredId = '';
+			pushUndo(
+				async () => { await api.deleteTask(projectId, restoredId); allTasks = allTasks.filter(t => t.id !== restoredId); },
+				async () => {
+					const restored = await api.createTask(projectId, { title: deleted.title, description: deleted.description || undefined });
+					restoredId = restored.id;
+					if (deleted.due_date) await api.updateTask(projectId, restored.id, { due_date: deleted.due_date } as any);
+					if (deleted.is_done) await api.updateTask(projectId, restored.id, { is_done: true });
+					allTasks = await api.listAllTasks();
+				},
+			);
 		}
 	}
 
@@ -129,7 +145,9 @@ export function getDataStore() {
 		moveTask,
 		deleteTask,
 		undo,
+		redo,
 		get canUndo() { return undoStack.length > 0; },
+		get canRedo() { return redoStack.length > 0; },
 		tasksForProject,
 		reset,
 	};
