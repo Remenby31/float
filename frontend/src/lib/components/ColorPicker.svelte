@@ -16,6 +16,7 @@
 	let customColor = $state('');
 	let emojiSearch = $state('');
 	let isMobile = $state(false);
+	let showAllEmojis = $state(false);
 
 	const presetColors = [
 		'#EF4444', '#F97316', '#EAB308', '#22C55E',
@@ -25,25 +26,83 @@
 		'#F472B6', '#FB923C', '#FBBF24', '#34D399',
 	];
 
-	// Emoji categories for browsing
-	const emojiCategories: { label: string; emojis: string[] }[] = [
-		{ label: 'frequent', emojis: ['🏠', '💼', '🎯', '📦', '🚀', '💡', '📚', '🎨', '🔧', '💰', '❤️', '⭐'] },
-		{ label: 'work', emojis: ['💻', '📊', '📈', '🗂️', '📋', '✏️', '🖊️', '📎', '🗃️', '💵', '🏢', '📧'] },
-		{ label: 'life', emojis: ['🏋️', '🍽️', '🛒', '🧹', '🏥', '💊', '🚗', '✈️', '🏖️', '🎉', '🎂', '👶'] },
-		{ label: 'creative', emojis: ['🎵', '🎮', '📱', '🧠', '🌱', '☕', '📸', '🎬', '🎤', '🖌️', '✍️', '🎹'] },
-		{ label: 'symbols', emojis: ['✅', '🔥', '⚡', '💎', '🎯', '🏆', '🔔', '💬', '📌', '🔗', '🏷️', '🗓️'] },
+	// Emoji categories with search keywords
+	const emojiData: { emoji: string; tags: string }[] = [
+		// frequent / general
+		{ emoji: '🏠', tags: 'home house maison' }, { emoji: '💼', tags: 'work job travail' }, { emoji: '🎯', tags: 'target goal objectif' },
+		{ emoji: '📦', tags: 'package box colis' }, { emoji: '🚀', tags: 'rocket launch fusée' }, { emoji: '💡', tags: 'idea light bulb idée' },
+		{ emoji: '📚', tags: 'books study livres' }, { emoji: '🎨', tags: 'art paint peinture' }, { emoji: '🔧', tags: 'tool wrench outil' },
+		{ emoji: '💰', tags: 'money cash argent' }, { emoji: '❤️', tags: 'heart love coeur' }, { emoji: '⭐', tags: 'star étoile' },
+		// work
+		{ emoji: '💻', tags: 'computer laptop ordinateur code dev' }, { emoji: '📊', tags: 'chart stats graphique' },
+		{ emoji: '📈', tags: 'growth trending croissance' }, { emoji: '🗂️', tags: 'folder files dossier' },
+		{ emoji: '📋', tags: 'clipboard list checklist' }, { emoji: '✏️', tags: 'pencil write crayon' },
+		{ emoji: '🖊️', tags: 'pen write stylo' }, { emoji: '📎', tags: 'paperclip clip trombone' },
+		{ emoji: '🗃️', tags: 'file cabinet archive' }, { emoji: '💵', tags: 'dollar money billet' },
+		{ emoji: '🏢', tags: 'office building bureau' }, { emoji: '📧', tags: 'email mail' },
+		{ emoji: '🤝', tags: 'handshake deal partner' }, { emoji: '📝', tags: 'memo note write' },
+		{ emoji: '🗓️', tags: 'calendar date planning' }, { emoji: '⏰', tags: 'alarm clock time heure' },
+		{ emoji: '📞', tags: 'phone call téléphone' }, { emoji: '💳', tags: 'card credit payment carte' },
+		// life
+		{ emoji: '🏋️', tags: 'gym fitness sport' }, { emoji: '🍽️', tags: 'food dinner eat repas' },
+		{ emoji: '🛒', tags: 'shop cart courses' }, { emoji: '🧹', tags: 'clean broom ménage' },
+		{ emoji: '🏥', tags: 'hospital health santé' }, { emoji: '💊', tags: 'medicine pill médicament' },
+		{ emoji: '🚗', tags: 'car drive voiture' }, { emoji: '✈️', tags: 'plane travel avion voyage' },
+		{ emoji: '🏖️', tags: 'beach vacation plage vacances' }, { emoji: '🎉', tags: 'party celebration fête' },
+		{ emoji: '🎂', tags: 'birthday cake anniversaire' }, { emoji: '👶', tags: 'baby child enfant bébé' },
+		{ emoji: '🐕', tags: 'dog pet chien animal' }, { emoji: '🐈', tags: 'cat pet chat animal' },
+		{ emoji: '🌿', tags: 'plant garden plante jardin' }, { emoji: '🍕', tags: 'pizza food' },
+		{ emoji: '🏃', tags: 'run jog course' }, { emoji: '🚴', tags: 'bike cycle vélo' },
+		{ emoji: '🧘', tags: 'yoga meditation zen' }, { emoji: '💤', tags: 'sleep rest sommeil' },
+		// creative / tech
+		{ emoji: '🎵', tags: 'music song musique' }, { emoji: '🎮', tags: 'game gaming jeu' },
+		{ emoji: '📱', tags: 'phone mobile téléphone' }, { emoji: '🧠', tags: 'brain think cerveau' },
+		{ emoji: '🌱', tags: 'seed grow start graine' }, { emoji: '☕', tags: 'coffee café' },
+		{ emoji: '📸', tags: 'camera photo' }, { emoji: '🎬', tags: 'film movie cinéma' },
+		{ emoji: '🎤', tags: 'mic podcast micro' }, { emoji: '🖌️', tags: 'brush paint pinceau' },
+		{ emoji: '✍️', tags: 'write author écrire' }, { emoji: '🎹', tags: 'piano keyboard music' },
+		{ emoji: '🤖', tags: 'robot ai bot' }, { emoji: '🔬', tags: 'science research microscope' },
+		{ emoji: '🌐', tags: 'web internet globe world' }, { emoji: '🛡️', tags: 'shield security defense' },
+		{ emoji: '⚙️', tags: 'gear settings config' }, { emoji: '🔒', tags: 'lock secure verrou' },
+		// symbols / status
+		{ emoji: '✅', tags: 'check done valid' }, { emoji: '🔥', tags: 'fire hot urgent' },
+		{ emoji: '⚡', tags: 'lightning fast speed' }, { emoji: '💎', tags: 'gem diamond premium' },
+		{ emoji: '🏆', tags: 'trophy win award prix' }, { emoji: '🔔', tags: 'bell notification' },
+		{ emoji: '💬', tags: 'chat message speech' }, { emoji: '📌', tags: 'pin pinned épingle' },
+		{ emoji: '🔗', tags: 'link chain lien' }, { emoji: '🏷️', tags: 'tag label étiquette' },
+		{ emoji: '⚠️', tags: 'warning alert attention' }, { emoji: '🚫', tags: 'no stop forbidden interdit' },
+		{ emoji: '♻️', tags: 'recycle green environment' }, { emoji: '🎁', tags: 'gift present cadeau' },
+		{ emoji: '🧩', tags: 'puzzle piece module' }, { emoji: '🗝️', tags: 'key access clé' },
+		// flags / places
+		{ emoji: '🇫🇷', tags: 'france french drapeau' }, { emoji: '🇺🇸', tags: 'usa america us' },
+		{ emoji: '🇬🇧', tags: 'uk england britain' }, { emoji: '🇪🇺', tags: 'europe eu' },
+		// people / hands
+		{ emoji: '👨‍💻', tags: 'developer programmer coder dev' }, { emoji: '👩‍🔬', tags: 'scientist researcher' },
+		{ emoji: '👥', tags: 'team people group équipe' }, { emoji: '🙌', tags: 'hands celebrate' },
+		{ emoji: '👍', tags: 'thumbs up ok' }, { emoji: '💪', tags: 'strong muscle force' },
+		// nature / weather
+		{ emoji: '🌅', tags: 'sunrise morning matin' }, { emoji: '🌙', tags: 'moon night nuit' },
+		{ emoji: '🌧️', tags: 'rain weather pluie' }, { emoji: '☀️', tags: 'sun sunny soleil' },
+		{ emoji: '🌊', tags: 'wave ocean sea mer' }, { emoji: '🏔️', tags: 'mountain montagne' },
 	];
 
 	let filteredEmojis = $derived.by(() => {
-		if (!emojiSearch.trim()) return emojiCategories;
 		const q = emojiSearch.trim().toLowerCase();
-		// Flatten all and filter (basic: just show all if search is short)
-		const all = emojiCategories.flatMap(c => c.emojis);
-		// For emoji search, we match by category label
-		const matchedCats = emojiCategories.filter(c => c.label.includes(q));
-		if (matchedCats.length > 0) return matchedCats;
-		// Otherwise return all as one group
-		return [{ label: 'all', emojis: [...new Set(all)] }];
+		if (!q) {
+			// Group into categories for display
+			return [
+				{ label: 'frequent', emojis: emojiData.slice(0, 12).map(e => e.emoji) },
+				{ label: 'work', emojis: emojiData.slice(12, 30).map(e => e.emoji) },
+				{ label: 'life', emojis: emojiData.slice(30, 50).map(e => e.emoji) },
+				{ label: 'creative', emojis: emojiData.slice(50, 68).map(e => e.emoji) },
+				{ label: 'symbols', emojis: emojiData.slice(68, 84).map(e => e.emoji) },
+				{ label: 'more', emojis: emojiData.slice(84).map(e => e.emoji) },
+			];
+		}
+		const matched = emojiData.filter(e => e.tags.includes(q));
+		return matched.length > 0
+			? [{ label: 'results', emojis: matched.map(e => e.emoji) }]
+			: [{ label: 'no results', emojis: [] }];
 	});
 
 	function pickColor(c: string) {
@@ -112,9 +171,12 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-[55] {isMobile ? 'bg-black/50 backdrop-blur-[2px]' : ''}" onclick={() => open = false}></div>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="{isMobile ? 'fixed inset-x-0 bottom-0 z-[60] w-full rounded-t-2xl picker-slideUp' : 'z-[60] w-56 rounded-xl picker-pop'} bg-elevated border border-border shadow-xl overflow-hidden"
 		style="{isMobile ? 'padding-bottom: env(safe-area-inset-bottom, 0px)' : popoverStyle}"
+		onclick={(e) => e.stopPropagation()}
 	>
 		<!-- Tabs -->
 		<div class="flex border-b border-border">
@@ -190,14 +252,26 @@
 			</div>
 		{/if}
 
-		<!-- Clear icon -->
-		{#if icon}
-			<div class="px-2.5 pb-2">
-				<button
-					type="button"
-					onclick={() => { icon = null; onchange?.(color, null); open = false; }}
-					class="w-full text-[10px] text-text-muted hover:text-text-secondary py-1 transition-colors"
-				>remove icon</button>
+		<!-- Custom emoji input -->
+		{#if tab === 'icon'}
+			<div class="px-2.5 pb-2 flex gap-1.5">
+				<input
+					type="text"
+					placeholder="paste any emoji..."
+					maxlength="4"
+					class="flex-1 bg-surface border border-border rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-text/8 transition-all"
+					oninput={(e) => {
+						const val = (e.target as HTMLInputElement).value.trim();
+						if (val && /\p{Emoji}/u.test(val)) { pickIcon(val); }
+					}}
+				/>
+				{#if icon}
+					<button
+						type="button"
+						onclick={() => { icon = null; onchange?.(color, null); open = false; }}
+						class="text-[10px] text-text-muted hover:text-danger px-2 py-1 transition-colors"
+					>remove</button>
+				{/if}
 			</div>
 		{/if}
 	</div>
