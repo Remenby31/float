@@ -514,11 +514,9 @@
 {#snippet taskListWithAdd(tasks: Task[], row: typeof taskRow, add: typeof addRow, projectId: string)}
 	{@const pending = tasks.filter(t => !t.is_done)}
 	{@const allDone = tasks.filter(t => t.is_done)}
-	{@const yesterday = new Date(new Date().setDate(new Date().getDate() - 1))}
-	{@const _ = yesterday.setHours(0, 0, 0, 0)}
-	{@const recentDone = allDone.filter(t => !t.done_at || new Date(t.done_at) >= yesterday)}
-	{@const olderDone = allDone.filter(t => t.done_at && new Date(t.done_at) < yesterday)}
-	{@const done = recentDone}
+	{@const todayMidnight = new Date(new Date().setHours(0, 0, 0, 0))}
+	{@const done = allDone.filter(t => !t.done_at || new Date(t.done_at) >= todayMidnight)}
+	{@const olderDone = allDone.filter(t => t.done_at && new Date(t.done_at) < todayMidnight)}
 	{#if pending.length > 0}
 		<div class="divide-y divide-border/50">
 			{#each pending as task (task.id)}
