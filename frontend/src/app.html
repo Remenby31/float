@@ -25,12 +25,19 @@
 			if ('serviceWorker' in navigator) {
 				window.addEventListener('load', () => {
 					navigator.serviceWorker.register('/sw.js').then(reg => {
+						// Only prompt on genuine updates (new SW waiting to activate)
+						if (reg.waiting) {
+							reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+							location.reload();
+							return;
+						}
 						reg.addEventListener('updatefound', () => {
 							const w = reg.installing;
-							if (w) w.addEventListener('statechange', () => {
+							if (!w) return;
+							w.addEventListener('statechange', () => {
 								if (w.state === 'installed' && navigator.serviceWorker.controller) {
-									// New version available
-									if (confirm('New version available. Reload?')) location.reload();
+									w.postMessage({ type: 'SKIP_WAITING' });
+									location.reload();
 								}
 							});
 						});

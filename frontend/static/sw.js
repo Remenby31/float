@@ -9,12 +9,11 @@ const APP_SHELL = [
 	'/icon-512.png',
 ];
 
-// Install: cache app shell
+// Install: cache app shell (don't skipWaiting — let the update prompt handle it)
 self.addEventListener('install', (e) => {
 	e.waitUntil(
 		caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
 	);
-	self.skipWaiting();
 });
 
 // Activate: clean old caches
@@ -25,6 +24,11 @@ self.addEventListener('activate', (e) => {
 		)
 	);
 	self.clients.claim();
+});
+
+// Skip waiting when told by the page
+self.addEventListener('message', (e) => {
+	if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 // Fetch strategy
