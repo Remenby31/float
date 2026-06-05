@@ -106,9 +106,9 @@
 	});
 
 	function pickColor(c: string) {
-		color = c;
+		color = c || null;
 		icon = null;
-		onchange?.(c, null);
+		onchange?.(c || null, null);
 		open = false;
 	}
 
@@ -205,6 +205,9 @@
 						></button>
 					{/each}
 				</div>
+				{#if color}
+					<button type="button" onclick={() => pickColor('')} class="text-[10px] text-text-muted hover:text-text-secondary transition-colors">reset color</button>
+				{/if}
 				<!-- Custom hex -->
 				<div class="flex gap-1.5">
 					<div class="flex-1 flex items-center bg-surface border border-border rounded-lg overflow-hidden">

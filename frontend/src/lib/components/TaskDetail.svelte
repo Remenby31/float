@@ -1,13 +1,12 @@
 <script lang="ts">
-	import { api, type Task, type Attachment } from '$lib/api';
-	import SmartInput from './SmartInput.svelte';
+	import { api, type Task, type Attachment, type Project } from '$lib/api';
 	import DatePicker from './DatePicker.svelte';
 	import NoteEditor from './NoteEditor.svelte';
-	import type { ParsedTask } from '$lib/smart-input';
+	import { getDataStore } from '$lib/stores/data.svelte';
 
 	let {
 		task = $bindable<Task | null>(null),
-		projectId,
+		projectId = $bindable<string>(''),
 		onUpdate,
 		onDelete,
 	}: {
@@ -17,6 +16,8 @@
 		onDelete: (id: string) => void;
 	} = $props();
 
+	const store = getDataStore();
+
 	// Lock body scroll when modal is open
 	$effect(() => {
 		if (task) document.body.style.overflow = 'hidden';
@@ -24,37 +25,62 @@
 		return () => { document.body.style.overflow = ''; };
 	});
 
+	// Global Escape listener
+	$effect(() => {
+		if (!task) return;
+		const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+		window.addEventListener('keydown', handler);
+		return () => window.removeEventListener('keydown', handler);
+	});
+
 	let attachments = $state<Attachment[]>([]);
 	let editingTitle = $state(false);
 	let titleEditValue = $state('');
 	let descriptionHtml = $state('');
 	let uploading = $state(false);
+	let confirmingDelete = $state(false);
+	let showProjectPicker = $state(false);
 	let fileInput: HTMLInputElement;
+
+	// Available leaf projects (no children) for move
+	let leafProjects = $derived(
+		store.projects.filter(p => !store.projects.some(c => c.parent_id === p.id))
+	);
 
 	$effect(() => {
 		if (task) {
 			descriptionHtml = task.description || '';
 			titleEditValue = task.title;
 			editingTitle = false;
+			confirmingDelete = false;
+			showProjectPicker = false;
 			loadAttachments();
 		}
 	});
+
+	let currentProject = $derived(store.projects.find(p => p.id === projectId));
 
 	async function loadAttachments() {
 		if (!task) return;
 		attachments = await api.listAttachments(projectId, task.id);
 	}
 
-	async function handleTitleSubmit(parsed: ParsedTask) {
-		if (!task) return;
-		const updates: any = {};
-		if (parsed.title) updates.title = parsed.title;
-		if (parsed.due_date) updates.due_date = parsed.due_date;
-		if (Object.keys(updates).length === 0) return;
-		const updated = await api.updateTask(projectId, task.id, updates);
-		task = updated;
-		onUpdate(updated);
+	async function handleTitleBlur() {
+		if (!task || !editingTitle) return;
 		editingTitle = false;
+		const newTitle = titleEditValue.trim();
+		if (newTitle && newTitle !== task.title) {
+			const updated = await api.updateTask(projectId, task.id, { title: newTitle });
+			task = updated;
+			onUpdate(updated);
+		}
+	}
+
+	async function handleTitleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			(e.target as HTMLElement)?.blur();
+		}
 	}
 
 	async function saveDescription(html?: string) {
@@ -79,6 +105,14 @@
 		onUpdate(updated);
 	}
 
+	async function moveToProject(newProjectId: string) {
+		if (!task || newProjectId === projectId) return;
+		await store.moveTask(projectId, task.id, newProjectId);
+		projectId = newProjectId;
+		showProjectPicker = false;
+		store.refreshTasks();
+	}
+
 	async function handleUpload() {
 		if (!task || !fileInput?.files?.length) return;
 		uploading = true;
@@ -96,18 +130,6 @@
 		attachments = attachments.filter(a => a.name !== name);
 	}
 
-	function formatSize(bytes: number) {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	}
-
-	function fileIcon(name: string) {
-		if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(name)) return 'img';
-		if (/\.(pdf)$/i.test(name)) return 'pdf';
-		return 'file';
-	}
-
 	async function handleDelete() {
 		if (!task) return;
 		await api.deleteTask(projectId, task.id);
@@ -116,7 +138,6 @@
 	}
 
 	function close() { task = null; }
-
 </script>
 
 {#if task}
@@ -124,14 +145,10 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 bg-black/50 z-40 backdrop-blur-[3px] animate-fadeIn" onclick={close}></div>
 
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:py-10 md:px-4 pointer-events-none"
-		onkeydown={(e) => { if (e.key === 'Escape') close(); }}
-	>
+	<div class="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:py-10 md:px-4 pointer-events-none">
 		<div class="bg-bg border-t md:border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-4xl max-h-[92vh] md:h-full flex flex-col pointer-events-auto animate-modalIn" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
 
-			<!-- Header with title -->
+			<!-- Header -->
 			<div class="flex items-center justify-between px-5 py-3.5 border-b border-border flex-shrink-0 gap-3">
 				<div class="flex items-center gap-3 flex-1 min-w-0">
 					<button
@@ -146,13 +163,13 @@
 						{/if}
 					</button>
 					{#if editingTitle}
-						<div class="flex-1 min-w-0">
-							<SmartInput
-								bind:value={titleEditValue}
-								placeholder="task title... @demain @midi @lundi"
-								onSubmit={handleTitleSubmit}
-							/>
-						</div>
+						<input
+							bind:value={titleEditValue}
+							autofocus
+							class="flex-1 bg-transparent text-lg font-medium text-text focus:outline-none leading-snug min-w-0"
+							onblur={handleTitleBlur}
+							onkeydown={handleTitleKeydown}
+						/>
 					{:else}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -163,9 +180,15 @@
 					{/if}
 				</div>
 				<div class="flex items-center gap-1 flex-shrink-0">
-					<button type="button" onclick={handleDelete} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-surface transition-all" title="delete">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-					</button>
+					{#if confirmingDelete}
+						<span class="text-xs text-danger mr-1">delete?</span>
+						<button type="button" onclick={handleDelete} class="px-2 py-1 text-xs bg-danger text-white rounded-lg hover:opacity-90 transition-all">yes</button>
+						<button type="button" onclick={() => confirmingDelete = false} class="px-2 py-1 text-xs text-text-muted hover:text-text-secondary transition-all">no</button>
+					{:else}
+						<button type="button" onclick={() => confirmingDelete = true} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-surface transition-all" title="delete">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+						</button>
+					{/if}
 					<button type="button" onclick={close} class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all" aria-label="close">
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 					</button>
@@ -174,10 +197,43 @@
 
 			<!-- Content -->
 			<div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
-				<!-- Due date -->
-				<div class="flex items-center gap-3">
-					<p class="text-[10px] uppercase tracking-wider text-text-muted w-10">due</p>
-					<DatePicker value={task.due_date} onchange={onDateChange} />
+				<!-- Metadata row -->
+				<div class="flex items-center gap-4 flex-wrap">
+					<div class="flex items-center gap-3">
+						<p class="text-[10px] uppercase tracking-wider text-text-muted w-10">due</p>
+						<DatePicker value={task.due_date} onchange={onDateChange} />
+					</div>
+					<div class="flex items-center gap-3">
+						<p class="text-[10px] uppercase tracking-wider text-text-muted w-10">in</p>
+						<div class="relative">
+							<button
+								type="button"
+								onclick={() => showProjectPicker = !showProjectPicker}
+								class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border border-border text-text-secondary hover:text-text hover:bg-surface/50 transition-all"
+							>
+								{#if currentProject?.icon}<span class="text-[11px]">{currentProject.icon}</span>{/if}
+								<span>{currentProject?.title || 'unknown'}</span>
+								<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ml-0.5"><polyline points="6 9 12 15 18 9"/></svg>
+							</button>
+							{#if showProjectPicker}
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div class="fixed inset-0 z-10" onclick={() => showProjectPicker = false}></div>
+								<div class="absolute top-full left-0 mt-1 bg-elevated border border-border rounded-xl shadow-lg overflow-hidden z-20 w-48 max-h-48 overflow-y-auto">
+									{#each leafProjects as p}
+										<button
+											type="button"
+											onclick={() => moveToProject(p.id)}
+											class="w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 transition-colors {p.id === projectId ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}"
+										>
+											{#if p.icon}<span class="text-[11px]">{p.icon}</span>{:else}<span class="w-2 h-2 rounded-full" style="background:{p.color || '#525252'}"></span>{/if}
+											<span class="truncate">{p.title}</span>
+										</button>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
 				</div>
 
 				<!-- Notes -->
@@ -187,30 +243,31 @@
 						placeholder="write something..."
 						onSave={(html) => { descriptionHtml = html; saveDescription(html); }}
 					/>
-					<!-- Attach button -->
-					<input
-						bind:this={fileInput}
-						type="file"
-						multiple
-						class="hidden"
-						onchange={handleUpload}
-					/>
-					<button
-						type="button"
-						onclick={() => fileInput?.click()}
-						disabled={uploading}
-						class="absolute bottom-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center text-text-muted/60 hover:text-text-muted hover:bg-surface/80 transition-all"
-						title="attach file"
-					>
-						{#if uploading}
-							<span class="w-3 h-3 border-2 border-text-muted/40 border-t-text-muted rounded-full animate-spin"></span>
-						{:else}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-						{/if}
-					</button>
+					<div class="absolute bottom-2 right-2 flex items-center gap-1">
+						<input
+							bind:this={fileInput}
+							type="file"
+							multiple
+							class="hidden"
+							onchange={handleUpload}
+						/>
+						<button
+							type="button"
+							onclick={() => fileInput?.click()}
+							disabled={uploading}
+							class="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted/60 hover:text-text-muted hover:bg-surface/80 transition-all"
+							title="attach file (drop or click)"
+						>
+							{#if uploading}
+								<span class="w-3 h-3 border-2 border-text-muted/40 border-t-text-muted rounded-full animate-spin"></span>
+							{:else}
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+							{/if}
+						</button>
+					</div>
 				</div>
 
-				<!-- Attached files (compact) -->
+				<!-- Attached files -->
 				{#if attachments.length > 0}
 					<div class="flex flex-wrap gap-2">
 						{#each attachments as att}

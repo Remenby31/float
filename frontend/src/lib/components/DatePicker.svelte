@@ -239,16 +239,19 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="fixed inset-0 z-[55] {isMobile ? 'bg-black/50 backdrop-blur-[2px]' : ''}" onclick={() => open = false}></div>
 
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="{isMobile ? 'fixed inset-x-0 bottom-0 z-[60] w-full rounded-t-2xl animate-slideUp' : 'z-[60] w-64 rounded-xl animate-popIn'} bg-elevated border border-border shadow-xl overflow-hidden"
 			style="{isMobile ? 'padding-bottom: env(safe-area-inset-bottom, 0px)' : popoverStyle}"
+			onclick={(e) => e.stopPropagation()}
 		>
 			<!-- Quick shortcuts -->
 			<div class="p-2 flex flex-wrap gap-1.5 border-b border-border">
-				<button type="button" onclick={() => setDate(addDays(0))} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-surface text-text-secondary hover:text-text transition-colors">today</button>
-				<button type="button" onclick={() => setDate(addDays(1))} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-surface text-text-secondary hover:text-text transition-colors">tomorrow</button>
-				<button type="button" onclick={() => setDate(nextMonday())} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-surface text-text-secondary hover:text-text transition-colors">monday</button>
-				<button type="button" onclick={() => setDate(addDays(7))} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-surface text-text-secondary hover:text-text transition-colors">next week</button>
+				<button type="button" onclick={() => setDate(addDays(0))} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-tertiary text-text-secondary hover:text-text transition-colors">today</button>
+				<button type="button" onclick={() => setDate(addDays(1))} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-tertiary text-text-secondary hover:text-text transition-colors">tomorrow</button>
+				<button type="button" onclick={() => setDate(nextMonday())} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-tertiary text-text-secondary hover:text-text transition-colors">monday</button>
+				<button type="button" onclick={() => setDate(addDays(7))} class="px-2.5 py-1 rounded-lg text-xs bg-surface hover:bg-tertiary text-text-secondary hover:text-text transition-colors">next week</button>
 				{#if value}
 					<button type="button" onclick={() => setDate(null)} class="px-2.5 py-1 rounded-lg text-xs text-text-muted hover:text-danger transition-colors">clear</button>
 				{/if}
@@ -284,7 +287,8 @@
 						type="time"
 						bind:value={timeValue}
 						onchange={() => applyTime(timeValue)}
-						class="bg-surface border border-border rounded px-1.5 py-0.5 text-[10px] text-text focus:outline-none w-[70px] ml-auto"
+						class="bg-surface border border-border rounded px-1.5 py-0.5 text-[10px] text-text focus:outline-none w-[70px] ml-auto color-scheme-dark"
+						style="color-scheme: {typeof document !== 'undefined' && document.documentElement.classList.contains('light') ? 'light' : 'dark'}"
 					/>
 					{#if timeValue}
 						<button type="button" onclick={clearTime} class="text-[9px] text-text-muted hover:text-danger transition-colors">x</button>

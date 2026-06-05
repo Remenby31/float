@@ -78,6 +78,13 @@
 		}
 	}
 
+	// Auto-resize on mount if value already present
+	$effect(() => {
+		if (inline && inputEl && value) {
+			requestAnimationFrame(autoResize);
+		}
+	});
+
 	function typeIcon(type: string) {
 		if (type === 'date') return 'date';
 		if (type === 'time') return 'time';
@@ -146,7 +153,7 @@
 
 	<!-- Suggestions dropdown -->
 	{#if showSuggestions}
-		<div class="absolute top-full left-0 right-0 mt-1 bg-elevated border border-border rounded-xl shadow-lg overflow-hidden z-20">
+		<div class="absolute {inline ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 right-0 bg-elevated border border-border rounded-xl shadow-lg overflow-hidden z-20">
 			{#each suggestions as s, i}
 				<button
 					type="button"

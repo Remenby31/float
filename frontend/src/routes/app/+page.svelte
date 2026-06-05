@@ -402,7 +402,7 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<span class="flex-1 text-sm font-medium cursor-text hover:text-text-secondary transition-colors" onclick={() => startEditingProject(grp.id, grp.title)}>{grp.title}</span>
 					{/if}
-					<div class="hidden md:flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity">
+					<div class="flex items-center gap-0.5 md:opacity-0 md:group-hover/header:opacity-100 transition-opacity">
 						<button type="button" onclick={() => { addingProjectTo = grp.id; newProjectTitle = ''; }} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary rounded transition-colors" title="add sub-project">
 							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 						</button>
@@ -442,7 +442,7 @@
 									<!-- svelte-ignore a11y_no_static_element_interactions -->
 									<span class="flex-1 text-xs font-medium text-text-secondary hover:text-text cursor-text transition-colors" onclick={() => startEditingProject(child.id, child.title)}>{child.title}</span>
 								{/if}
-								<button type="button" onclick={() => askDeleteProject(child.id)} class="w-4 h-4 hidden md:flex items-center justify-center text-text-muted hover:text-danger rounded opacity-0 group-hover/child:opacity-100 transition-all" title="delete">
+								<button type="button" onclick={() => askDeleteProject(child.id)} class="w-4 h-4 flex items-center justify-center text-text-muted hover:text-danger rounded md:opacity-0 md:group-hover/child:opacity-100 transition-all" title="delete">
 									<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 								</button>
 							</div>
@@ -513,7 +513,12 @@
 
 {#snippet taskListWithAdd(tasks: Task[], row: typeof taskRow, add: typeof addRow, projectId: string)}
 	{@const pending = tasks.filter(t => !t.is_done)}
-	{@const done = tasks.filter(t => t.is_done)}
+	{@const allDone = tasks.filter(t => t.is_done)}
+	{@const yesterday = new Date(new Date().setDate(new Date().getDate() - 1))}
+	{@const _ = yesterday.setHours(0, 0, 0, 0)}
+	{@const recentDone = allDone.filter(t => !t.done_at || new Date(t.done_at) >= yesterday)}
+	{@const olderDone = allDone.filter(t => t.done_at && new Date(t.done_at) < yesterday)}
+	{@const done = recentDone}
 	{#if pending.length > 0}
 		<div class="divide-y divide-border/50">
 			{#each pending as task (task.id)}
@@ -522,9 +527,9 @@
 		</div>
 	{/if}
 	{@render add(projectId)}
-	{#if done.length > 0}
+	{#if done.length > 0 || olderDone.length > 0}
 		{@const visible = done.slice(-2)}
-		{@const hidden = done.slice(0, -2)}
+		{@const hidden = [...olderDone, ...done.slice(0, -2)]}
 		{#if hidden.length > 0}
 			<details class="border-t border-border/30">
 				<summary class="px-4 py-1.5 text-[10px] text-text-muted cursor-pointer select-none hover:text-text-secondary transition-colors">+{hidden.length} completed</summary>
@@ -682,3 +687,14 @@
 	.animate-spin { animation: spin 0.6s linear infinite; }
 	@keyframes spin { to { transform: rotate(360deg); } }
 </style>
+
+<svelte:head>
+	<style>
+		@keyframes checkPop {
+			0% { transform: scale(1); }
+			50% { transform: scale(1.3); }
+			100% { transform: scale(1); }
+		}
+		button:active .check-pop { animation: checkPop 0.2s ease; }
+	</style>
+</svelte:head>
