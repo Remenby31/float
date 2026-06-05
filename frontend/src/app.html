@@ -21,30 +21,6 @@
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<title>Float</title>
 		%sveltekit.head%
-		<script>
-			if ('serviceWorker' in navigator) {
-				window.addEventListener('load', () => {
-					navigator.serviceWorker.register('/sw.js').then(reg => {
-						// Only prompt on genuine updates (new SW waiting to activate)
-						if (reg.waiting) {
-							reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-							location.reload();
-							return;
-						}
-						reg.addEventListener('updatefound', () => {
-							const w = reg.installing;
-							if (!w) return;
-							w.addEventListener('statechange', () => {
-								if (w.state === 'installed' && navigator.serviceWorker.controller) {
-									w.postMessage({ type: 'SKIP_WAITING' });
-									location.reload();
-								}
-							});
-						});
-					});
-				});
-			}
-		</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
