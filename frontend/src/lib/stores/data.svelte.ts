@@ -44,6 +44,15 @@ export function getDataStore() {
 		return updated;
 	}
 
+	async function reorderProjects(projectIds: string[]) {
+		// Optimistic: update positions locally
+		projects = projects.map(p => {
+			const idx = projectIds.indexOf(p.id);
+			return idx >= 0 ? { ...p, position: idx } : p;
+		}).sort((a, b) => a.position - b.position);
+		await api.reorderProjects(projectIds);
+	}
+
 	async function deleteProject(id: string) {
 		await api.deleteProject(id);
 		projects = projects.filter(p => p.id !== id && p.parent_id !== id);
@@ -139,6 +148,7 @@ export function getDataStore() {
 		refreshAll,
 		addProject,
 		updateProject,
+		reorderProjects,
 		deleteProject,
 		addTask,
 		updateTask,

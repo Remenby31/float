@@ -16,6 +16,8 @@
 	let editingTaskValue = $state('');
 	let dragTask = $state<Task | null>(null);
 	let dropTargetId = $state<string | null>(null);
+	let dragProjectId = $state<string | null>(null);
+	let dropProjectTargetId = $state<string | null>(null);
 
 	let groups = $derived(store.projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
@@ -155,6 +157,42 @@
 		dragTask = null;
 	}
 
+	// Project reorder drag
+	function onProjectDragStart(e: DragEvent, projectId: string) {
+		dragProjectId = projectId;
+		e.dataTransfer?.setData('text/plain', projectId);
+	}
+
+	function onProjectDragOver(e: DragEvent, targetId: string) {
+		if (!dragProjectId || dragProjectId === targetId) return;
+		e.preventDefault();
+		dropProjectTargetId = targetId;
+	}
+
+	function onProjectDragLeave(targetId: string) {
+		if (dropProjectTargetId === targetId) dropProjectTargetId = null;
+	}
+
+	async function onProjectDrop(e: DragEvent, targetId: string) {
+		e.preventDefault();
+		dropProjectTargetId = null;
+		if (!dragProjectId || dragProjectId === targetId) { dragProjectId = null; return; }
+		// Reorder: move dragProjectId before targetId
+		const ids = groups.map(g => g.id);
+		const fromIdx = ids.indexOf(dragProjectId);
+		const toIdx = ids.indexOf(targetId);
+		if (fromIdx < 0 || toIdx < 0) { dragProjectId = null; return; }
+		ids.splice(fromIdx, 1);
+		ids.splice(toIdx, 0, dragProjectId);
+		dragProjectId = null;
+		await store.reorderProjects(ids);
+	}
+
+	function onProjectDragEnd() {
+		dragProjectId = null;
+		dropProjectTargetId = null;
+	}
+
 	async function onTouchDrop(e: CustomEvent<{ taskId: string; fromProjectId: string; toProjectId: string }>) {
 		const { taskId, fromProjectId, toProjectId } = e.detail;
 		await store.moveTask(fromProjectId, taskId, toProjectId);
@@ -220,7 +258,7 @@
 									<button
 										type="button"
 										onclick={() => toggleDone(dt.task)}
-										class="w-4 h-4 mt-0.5 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
+										class="w-4 h-4 mt-0.5 relative touch-target rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
 										style="border-color:{section.label === 'overdue' ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
 									></button>
 									{#if editingTaskId === dt.task.id}
@@ -277,14 +315,19 @@
 
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<section
-				class="border rounded-xl overflow-hidden break-inside-avoid transition-colors {dropTargetId === grp.id && children.length === 0 ? 'border-accent ring-2 ring-accent/20' : 'border-border'}"
+				class="border rounded-xl overflow-hidden break-inside-avoid transition-all {dropProjectTargetId === grp.id ? 'border-accent ring-2 ring-accent/20 scale-[1.01]' : dropTargetId === grp.id && children.length === 0 ? 'border-accent ring-2 ring-accent/20' : 'border-border'} {dragProjectId === grp.id ? 'opacity-40' : ''}"
 				data-drop-project={children.length === 0 ? grp.id : undefined}
-				ondragover={(e) => { if (children.length === 0) onDragOver(e, grp.id); }}
-				ondragleave={() => { if (children.length === 0) onDragLeave(grp.id); }}
-				ondrop={(e) => { if (children.length === 0) onDrop(e, grp.id); }}
+				ondragover={(e) => { if (dragProjectId) onProjectDragOver(e, grp.id); else if (children.length === 0) onDragOver(e, grp.id); }}
+				ondragleave={() => { if (dragProjectId) onProjectDragLeave(grp.id); else if (children.length === 0) onDragLeave(grp.id); }}
+				ondrop={(e) => { if (dragProjectId) onProjectDrop(e, grp.id); else if (children.length === 0) onDrop(e, grp.id); }}
 			>
-				<!-- Header -->
-				<div class="px-4 py-3 bg-surface/30 flex items-center gap-3">
+				<!-- Header (drag handle for project reorder) -->
+				<div
+					class="px-4 py-3 bg-surface/30 flex items-center gap-3 cursor-grab active:cursor-grabbing"
+					draggable="true"
+					ondragstart={(e) => onProjectDragStart(e, grp.id)}
+					ondragend={onProjectDragEnd}
+				>
 					<ColorPicker color={grp.color} icon={grp.icon} onchange={(c, i) => updateProjectAppearance(grp.id, c, i)} />
 					<a href="/app/project/{grp.id}" class="text-sm font-medium hover:text-text-secondary transition-colors">{grp.title}</a>
 				</div>
@@ -363,7 +406,7 @@
 		<button
 			type="button"
 			onclick={() => toggleDone(task)}
-			class="w-4 h-4 mt-0.5 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
+			class="w-4 h-4 mt-0.5 relative touch-target rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
 			style={task.is_done ? '' : 'border-color:var(--color-border-strong)'}
 		>
 			{#if task.is_done}
@@ -413,7 +456,7 @@
 		<button
 			type="button"
 			onclick={() => toggleDone(task)}
-			class="w-4 h-4 mt-0.5 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
+			class="w-4 h-4 mt-0.5 relative touch-target rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all {task.is_done ? 'bg-success border-success' : 'hover:border-success hover:bg-success'}"
 			style={task.is_done ? '' : 'border-color:var(--color-border-strong)'}
 		>
 			{#if task.is_done}

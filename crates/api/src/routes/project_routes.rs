@@ -2,6 +2,7 @@ use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Json, Router};
 use sea_orm::*;
+use sea_orm::sea_query::Expr;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -14,6 +15,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/projects", get(list).post(create))
         .route("/projects/{id}", get(get_one).put(update).delete(delete))
+        .route("/projects/reorder", axum::routing::put(reorder))
 }
 
 #[derive(Deserialize)]
@@ -165,4 +167,25 @@ async fn delete(
     }
     state.emit("project", "deleted", &id.to_string(), &auth.user_id.to_string());
     Ok(Json(serde_json::json!({ "deleted": true })))
+}
+
+#[derive(Deserialize)]
+struct ReorderInput {
+    project_ids: Vec<Uuid>,
+}
+
+async fn reorder(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Json(input): Json<ReorderInput>,
+) -> ApiResult<Json<serde_json::Value>> {
+    for (pos, project_id) in input.project_ids.iter().enumerate() {
+        project::Entity::update_many()
+            .filter(project::Column::Id.eq(*project_id))
+            .filter(project::Column::UserId.eq(auth.user_id))
+            .col_expr(project::Column::Position, Expr::value(pos as i32))
+            .exec(&state.db)
+            .await?;
+    }
+    Ok(Json(serde_json::json!({ "reordered": true })))
 }
