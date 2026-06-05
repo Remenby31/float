@@ -61,7 +61,7 @@
 		newTitle = '';
 		adding = false;
 		if (parentId) collapsed.delete(parentId);
-		goto(`/app/project/${p.id}`);
+		setTimeout(() => scrollToProject(p.id), 100);
 	}
 
 	let confirmDelete = $state<{ id: string; title: string; hasTasks: boolean } | null>(null);
@@ -85,7 +85,6 @@
 	async function doDeleteProject(id: string) {
 		confirmDelete = null;
 		await store.deleteProject(id);
-		if (page.url.pathname === `/app/project/${id}`) goto('/app');
 	}
 
 	function toggleCollapse(id: string) {
@@ -103,10 +102,20 @@
 		await store.updateProject(id, { color, icon } as any);
 	}
 
-	let isSubPage = $derived(page.url.pathname.startsWith('/app/project/'));
-	let currentProject = $derived(
-		isSubPage ? store.projects.find(p => page.url.pathname === `/app/project/${p.id}`) : null
-	);
+	let isSubPage = false;
+	let currentProject = null as any;
+
+	function scrollToProject(id: string) {
+		sidebarOpen = false;
+		if (page.url.pathname !== '/app') {
+			goto('/app');
+			setTimeout(() => {
+				document.getElementById(`project-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}, 300);
+		} else {
+			document.getElementById(`project-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+	}
 
 	function logout() {
 		localStorage.removeItem('float_token');
@@ -118,25 +127,13 @@
 <div class="min-h-screen bg-bg flex flex-col md:flex-row">
 	<!-- Mobile top bar -->
 	<header class="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-bg sticky top-0 z-30" style="padding-top: calc(0.75rem + env(safe-area-inset-top, 0px))">
-		{#if isSubPage}
-			<button type="button" onclick={() => history.back()} class="w-10 h-10 flex items-center justify-center -ml-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-			</button>
-		{:else}
-			<button type="button" onclick={() => sidebarOpen = true} class="w-10 h-10 flex items-center justify-center -ml-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-			</button>
-		{/if}
-		<span class="text-sm font-semibold tracking-tight">{currentProject?.title || 'float'}</span>
-		{#if isSubPage}
-			<button type="button" onclick={() => sidebarOpen = true} class="w-10 h-10 flex items-center justify-center -mr-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-			</button>
-		{:else}
-			<button type="button" onclick={() => cmdOpen = true} class="w-10 h-10 flex items-center justify-center -mr-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-			</button>
-		{/if}
+		<button type="button" onclick={() => sidebarOpen = true} class="w-10 h-10 flex items-center justify-center -ml-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+		</button>
+		<span class="text-sm font-semibold tracking-tight">float</span>
+		<button type="button" onclick={() => cmdOpen = true} class="w-10 h-10 flex items-center justify-center -mr-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+		</button>
 	</header>
 
 	<!-- Mobile overlay -->
@@ -188,15 +185,15 @@
 								<span class="text-[10px] font-semibold uppercase tracking-widest text-text-muted truncate">{grp.title}</span>
 							</div>
 						{:else}
-							<!-- Standalone project (no children = project, not group) -->
-							{@const active = page.url.pathname === `/app/project/${grp.id}`}
-							<a
-								href="/app/project/{grp.id}"
-								class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all {active ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}"
+							<!-- Standalone project -->
+							<button
+								type="button"
+								onclick={() => scrollToProject(grp.id)}
+								class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all text-text-muted hover:bg-surface/50 hover:text-text-secondary text-left"
 							>
 								<ColorPicker color={grp.color} icon={grp.icon} onchange={(c, i) => updateProjectAppearance(grp.id, c, i)} />
 								<span class="truncate">{grp.title}</span>
-							</a>
+							</button>
 						{/if}
 						<div class="hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
 							<button
@@ -222,17 +219,17 @@
 				<!-- Projects in group -->
 				{#if !isCollapsed}
 					{#each children as child}
-						{@const childActive = page.url.pathname === `/app/project/${child.id}`}
-						<div class="group relative pl-4">
+							<div class="group relative pl-4">
 							<div class="absolute left-[9px] top-0 bottom-0 w-px bg-border"></div>
 							<div class="flex items-center">
-								<a
-									href="/app/project/{child.id}"
-									class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all {childActive ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}"
+								<button
+									type="button"
+									onclick={() => scrollToProject(child.id)}
+									class="flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[13px] transition-all text-text-muted hover:bg-surface/50 hover:text-text-secondary text-left"
 								>
 									<ColorPicker color={child.color || grp.color} icon={child.icon} onchange={(c, i) => updateProjectAppearance(child.id, c, i)} />
 									<span class="truncate">{child.title}</span>
-								</a>
+								</button>
 								<button
 									type="button"
 									onclick={() => askDeleteProject(child.id)}

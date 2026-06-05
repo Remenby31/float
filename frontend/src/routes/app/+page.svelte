@@ -18,6 +18,11 @@
 	let dropTargetId = $state<string | null>(null);
 	let dragProjectId = $state<string | null>(null);
 	let dropProjectTargetId = $state<string | null>(null);
+	let editingProjectId = $state<string | null>(null);
+	let editingProjectTitle = $state('');
+	let addingProjectTo = $state<false | string | 'root'>(false);
+	let newProjectTitle = $state('');
+	let confirmDelete = $state<{ id: string; title: string } | null>(null);
 
 	let groups = $derived(store.projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
@@ -198,6 +203,60 @@
 		await store.moveTask(fromProjectId, taskId, toProjectId);
 	}
 
+	// Project management
+	function startEditingProject(id: string, title: string) {
+		editingProjectId = id;
+		editingProjectTitle = title;
+	}
+
+	async function saveProjectTitle(id: string) {
+		editingProjectId = null;
+		if (editingProjectTitle.trim()) {
+			await store.updateProject(id, { title: editingProjectTitle.trim() } as any);
+		}
+	}
+
+	async function addProject(parentId?: string) {
+		if (!newProjectTitle.trim()) return;
+		await store.addProject({ title: newProjectTitle.trim(), parent_id: parentId });
+		newProjectTitle = '';
+		addingProjectTo = false;
+	}
+
+	async function askDeleteProject(id: string) {
+		const proj = store.projects.find(p => p.id === id);
+		if (!proj) return;
+		confirmDelete = { id, title: proj.title };
+	}
+
+	async function doDeleteProject(id: string) {
+		confirmDelete = null;
+		await store.deleteProject(id);
+	}
+
+	// Debounced auto-save for inline task editing
+	let saveTimer: ReturnType<typeof setTimeout>;
+	$effect(() => {
+		if (editingTaskId && editingTaskValue) {
+			clearTimeout(saveTimer);
+			const taskId = editingTaskId;
+			const val = editingTaskValue;
+			saveTimer = setTimeout(() => {
+				const task = store.allTasks.find(t => t.id === taskId);
+				if (task && val.trim() && val.trim() !== task.title) {
+					const parsed = parseInput(val);
+					const updates: any = {};
+					if (parsed.title && parsed.title !== task.title) updates.title = parsed.title;
+					if (parsed.due_date) updates.due_date = parsed.due_date;
+					if (Object.keys(updates).length > 0) {
+						store.updateTask(task.project_id, taskId, updates);
+					}
+				}
+			}, 500);
+		}
+		return () => clearTimeout(saveTimer);
+	});
+
 	function getInput(pid: string): string {
 		return addInputs[pid] || '';
 	}
@@ -323,13 +382,34 @@
 			>
 				<!-- Header (drag handle for project reorder) -->
 				<div
-					class="px-4 py-3 bg-surface/30 flex items-center gap-3 cursor-grab active:cursor-grabbing"
+					class="px-4 py-3 bg-surface/30 flex items-center gap-3 cursor-grab active:cursor-grabbing group/header"
 					draggable="true"
 					ondragstart={(e) => onProjectDragStart(e, grp.id)}
 					ondragend={onProjectDragEnd}
+					id="project-{grp.id}"
 				>
 					<ColorPicker color={grp.color} icon={grp.icon} onchange={(c, i) => updateProjectAppearance(grp.id, c, i)} />
-					<a href="/app/project/{grp.id}" class="text-sm font-medium hover:text-text-secondary transition-colors">{grp.title}</a>
+					{#if editingProjectId === grp.id}
+						<input
+							bind:value={editingProjectTitle}
+							autofocus
+							class="flex-1 bg-transparent text-sm font-medium text-text focus:outline-none"
+							onblur={() => saveProjectTitle(grp.id)}
+							onkeydown={(e) => { if (e.key === 'Enter') saveProjectTitle(grp.id); if (e.key === 'Escape') editingProjectId = null; }}
+						/>
+					{:else}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<span class="flex-1 text-sm font-medium cursor-text hover:text-text-secondary transition-colors" onclick={() => startEditingProject(grp.id, grp.title)}>{grp.title}</span>
+					{/if}
+					<div class="hidden md:flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity">
+						<button type="button" onclick={() => { addingProjectTo = grp.id; newProjectTitle = ''; }} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary rounded transition-colors" title="add sub-project">
+							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+						</button>
+						<button type="button" onclick={() => askDeleteProject(grp.id)} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-danger rounded transition-colors" title="delete">
+							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						</button>
+					</div>
 				</div>
 
 				{#if children.length === 0}
@@ -347,18 +427,88 @@
 							ondragleave={() => onDragLeave(child.id)}
 							ondrop={(e) => onDrop(e, child.id)}
 						>
-							<div class="px-4 py-2 bg-surface/15 flex items-center gap-2.5 pl-6">
+							<div class="px-4 py-2 bg-surface/15 flex items-center gap-2.5 pl-6 group/child" id="project-{child.id}">
 								<ColorPicker color={child.color || grp.color} icon={child.icon} onchange={(c, i) => updateProjectAppearance(child.id, c, i)} />
-								<a href="/app/project/{child.id}" class="text-xs font-medium text-text-secondary hover:text-text transition-colors">{child.title}</a>
+								{#if editingProjectId === child.id}
+									<input
+										bind:value={editingProjectTitle}
+										autofocus
+										class="flex-1 bg-transparent text-xs font-medium text-text focus:outline-none"
+										onblur={() => saveProjectTitle(child.id)}
+										onkeydown={(e) => { if (e.key === 'Enter') saveProjectTitle(child.id); if (e.key === 'Escape') editingProjectId = null; }}
+									/>
+								{:else}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<span class="flex-1 text-xs font-medium text-text-secondary hover:text-text cursor-text transition-colors" onclick={() => startEditingProject(child.id, child.title)}>{child.title}</span>
+								{/if}
+								<button type="button" onclick={() => askDeleteProject(child.id)} class="w-4 h-4 hidden md:flex items-center justify-center text-text-muted hover:text-danger rounded opacity-0 group-hover/child:opacity-100 transition-all" title="delete">
+									<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+								</button>
 							</div>
 							{@render taskListWithAdd(store.tasksForProject(child.id), taskRowIndented, addRowIndented, child.id)}
 						</div>
 					{/each}
-				{/if}
-			</section>
-		{/each}
+						<!-- Inline add sub-project -->
+						{#if addingProjectTo === grp.id}
+							<div class="border-t border-border px-4 py-2 pl-6">
+								<form onsubmit={(e) => { e.preventDefault(); addProject(grp.id); }}>
+									<input
+										bind:value={newProjectTitle}
+										placeholder="project name..."
+										autofocus
+										class="w-full bg-transparent text-xs font-medium text-text placeholder:text-text-muted/50 focus:outline-none"
+										onblur={() => { if (!newProjectTitle) addingProjectTo = false; }}
+										onkeydown={(e) => { if (e.key === 'Escape') { addingProjectTo = false; newProjectTitle = ''; } }}
+									/>
+								</form>
+							</div>
+						{/if}
+					{/if}
+				</section>
+			{/each}
+
+			<!-- New group button -->
+			{#if addingProjectTo === 'root'}
+				<div class="border border-border rounded-xl overflow-hidden break-inside-avoid p-3">
+					<form onsubmit={(e) => { e.preventDefault(); addProject(); }}>
+						<input
+							bind:value={newProjectTitle}
+							placeholder="group name..."
+							autofocus
+							class="w-full bg-transparent text-sm font-medium text-text placeholder:text-text-muted/50 focus:outline-none"
+							onblur={() => { if (!newProjectTitle) addingProjectTo = false; }}
+							onkeydown={(e) => { if (e.key === 'Escape') { addingProjectTo = false; newProjectTitle = ''; } }}
+						/>
+					</form>
+				</div>
+			{:else}
+				<button
+					type="button"
+					onclick={() => { addingProjectTo = 'root'; newProjectTitle = ''; }}
+					class="w-full border border-dashed border-border rounded-xl py-3 text-xs text-text-muted hover:text-text-secondary hover:border-border-strong transition-all break-inside-avoid"
+				>+ new group</button>
+			{/if}
+		</div>
 	</div>
-</div>
+{/if}
+
+<!-- Delete confirmation -->
+{#if confirmDelete}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center backdrop-blur-[2px]" onclick={() => confirmDelete = null}>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="bg-bg border border-border rounded-xl p-5 w-full max-w-sm shadow-xl" onclick={(e) => e.stopPropagation()}>
+			<h3 class="text-sm font-medium mb-2">delete "{confirmDelete.title}"?</h3>
+			<p class="text-xs text-text-muted mb-4">this will be permanently deleted.</p>
+			<div class="flex gap-2 justify-end">
+				<button type="button" onclick={() => confirmDelete = null} class="px-3 py-1.5 text-xs text-text-secondary hover:text-text rounded-lg hover:bg-surface transition-all">cancel</button>
+				<button type="button" onclick={() => doDeleteProject(confirmDelete!.id)} class="px-3 py-1.5 text-xs bg-danger text-white rounded-lg hover:opacity-90 active:scale-[0.98] transition-all">delete</button>
+			</div>
+		</div>
+	</div>
 {/if}
 
 {#snippet taskListWithAdd(tasks: Task[], row: typeof taskRow, add: typeof addRow, projectId: string)}

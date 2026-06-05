@@ -81,9 +81,10 @@
 	});
 
 	function navigate(r: Result) {
-		if (r.type === 'project') goto(`/app/project/${r.id}`);
-		else goto(`/app/project/${r.projectId}`);
+		const pid = r.type === 'project' ? r.id : r.projectId;
 		open = false;
+		if (page.url.pathname !== '/app') goto('/app');
+		setTimeout(() => document.getElementById(`project-${pid}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
 	}
 
 	function startCreate() {
@@ -96,8 +97,9 @@
 
 	async function createInProject(projectId: string) {
 		await store.addTask(projectId, { title: creatingTask });
-		goto(`/app/project/${projectId}`);
 		open = false;
+		if (page.url.pathname !== '/app') goto('/app');
+		setTimeout(() => document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
 	}
 
 	function onKeydown(e: KeyboardEvent) {
