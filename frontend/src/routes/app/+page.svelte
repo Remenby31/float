@@ -367,14 +367,14 @@
 		</div>
 	{/if}
 
-	<div class="columns-1 md:columns-2 gap-4 space-y-4">
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
 		{#each groups as grp}
 			{@const children = childrenOf(grp.id)}
 			{@const stats = projectStats(grp.id)}
 
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<section
-				class="border rounded-xl overflow-hidden break-inside-avoid transition-all {dropProjectTargetId === grp.id ? 'border-accent ring-2 ring-accent/20 scale-[1.01]' : dropTargetId === grp.id && children.length === 0 ? 'border-accent ring-2 ring-accent/20' : 'border-border'} {dragProjectId === grp.id ? 'opacity-40' : ''}"
+				class="border rounded-xl overflow-hidden transition-all {dropProjectTargetId === grp.id ? 'border-accent ring-2 ring-accent/20 scale-[1.01]' : dropTargetId === grp.id && children.length === 0 ? 'border-accent ring-2 ring-accent/20' : 'border-border'} {dragProjectId === grp.id ? 'opacity-40' : ''}"
 				data-drop-project={children.length === 0 ? grp.id : undefined}
 				ondragover={(e) => { if (dragProjectId) onProjectDragOver(e, grp.id); else if (children.length === 0) onDragOver(e, grp.id); }}
 				ondragleave={() => { if (dragProjectId) onProjectDragLeave(grp.id); else if (children.length === 0) onDragLeave(grp.id); }}
@@ -470,7 +470,7 @@
 
 			<!-- New group button -->
 			{#if addingProjectTo === 'root'}
-				<div class="border border-border rounded-xl overflow-hidden break-inside-avoid p-3">
+				<div class="border border-border rounded-xl overflow-hidden p-3">
 					<form onsubmit={(e) => { e.preventDefault(); addProject(); }}>
 						<input
 							bind:value={newProjectTitle}

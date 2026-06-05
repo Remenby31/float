@@ -51,6 +51,8 @@
 		{ emoji: '🏖️', tags: 'beach vacation plage vacances' }, { emoji: '🎉', tags: 'party celebration fête' },
 		{ emoji: '🎂', tags: 'birthday cake anniversaire' }, { emoji: '👶', tags: 'baby child enfant bébé' },
 		{ emoji: '🐕', tags: 'dog pet chien animal' }, { emoji: '🐈', tags: 'cat pet chat animal' },
+		{ emoji: '🐯', tags: 'tiger tigre animal' }, { emoji: '🦁', tags: 'lion animal' },
+		{ emoji: '🐻', tags: 'bear ours animal' }, { emoji: '🦊', tags: 'fox renard animal' },
 		{ emoji: '🌿', tags: 'plant garden plante jardin' }, { emoji: '🍕', tags: 'pizza food' },
 		{ emoji: '🏃', tags: 'run jog course' }, { emoji: '🚴', tags: 'bike cycle vélo' },
 		{ emoji: '🧘', tags: 'yoga meditation zen' }, { emoji: '💤', tags: 'sleep rest sommeil' },
@@ -261,11 +263,11 @@
 				<input
 					type="text"
 					placeholder="paste any emoji..."
-					maxlength="4"
+					maxlength="8"
 					class="flex-1 bg-surface border border-border rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-text/8 transition-all"
 					oninput={(e) => {
 						const val = (e.target as HTMLInputElement).value.trim();
-						if (val && /\p{Emoji}/u.test(val)) { pickIcon(val); }
+						if (val && /\p{Emoji_Presentation}/u.test(val)) { pickIcon([...val].slice(0, 2).join('')); }
 					}}
 				/>
 				{#if icon}
