@@ -30,7 +30,16 @@
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
 
 	// Temporal view: group dated tasks by time bucket
-	interface DatedTask { task: Task; projectName: string; projectColor: string | null; projectIcon: string | null; }
+	interface DatedTask {
+		task: Task;
+		projectName: string;
+		projectColor: string | null;
+		projectIcon: string | null;
+		familyId: string;
+		familyName: string;
+		familyColor: string | null;
+		familyIcon: string | null;
+	}
 
 	function startOfDay(d: Date): Date { const r = new Date(d); r.setHours(0,0,0,0); return r; }
 
@@ -49,11 +58,17 @@
 			if (t.is_done || !t.due_date) continue;
 			const proj = store.projects.find(p => p.id === t.project_id);
 			const parent = proj?.parent_id ? store.projects.find(p => p.id === proj.parent_id) : null;
+			// Family = parent group if exists, otherwise the project itself
+			const family = parent || proj;
 			const dt: DatedTask = {
 				task: t,
 				projectName: proj?.title || '',
 				projectColor: proj?.color || parent?.color || null,
 				projectIcon: proj?.icon || null,
+				familyId: family?.id || t.project_id,
+				familyName: family?.title || proj?.title || '',
+				familyColor: family?.color || null,
+				familyIcon: family?.icon || null,
 			};
 			const due = startOfDay(new Date(t.due_date));
 			if (due < now) overdue.push(dt);
@@ -71,17 +86,17 @@
 		datedTasks.thisWeek.length + datedTasks.later.length > 0
 	);
 
-	function groupByProject(items: DatedTask[]): { projectName: string; projectColor: string | null; projectIcon: string | null; tasks: DatedTask[] }[] {
+	function groupByFamily(items: DatedTask[]): { familyName: string; familyColor: string | null; familyIcon: string | null; tasks: DatedTask[] }[] {
 		const map = new Map<string, DatedTask[]>();
 		for (const dt of items) {
-			const key = dt.task.project_id;
+			const key = dt.familyId;
 			if (!map.has(key)) map.set(key, []);
 			map.get(key)!.push(dt);
 		}
 		return Array.from(map.values()).map(group => ({
-			projectName: group[0].projectName,
-			projectColor: group[0].projectColor,
-			projectIcon: group[0].projectIcon,
+			familyName: group[0].familyName,
+			familyColor: group[0].familyColor,
+			familyIcon: group[0].familyIcon,
 			tasks: group,
 		}));
 	}
@@ -336,18 +351,18 @@
 							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="ml-auto text-text-muted transition-transform group-open/section:rotate-90 flex-shrink-0"><polyline points="9 6 15 12 9 18"/></svg>
 						</summary>
 						<div>
-							{#each groupByProject(section.items) as projGroup}
-								<div class="border-l-2 ml-3" style="border-color:{projGroup.projectColor || '#525252'}">
+							{#each groupByFamily(section.items) as famGroup}
+								<div class="border-l-2 ml-3" style="border-color:{famGroup.familyColor || '#525252'}">
 									<div class="flex items-center gap-1.5 px-3 py-1 bg-surface/20">
-										{#if projGroup.projectIcon}
-											<span class="text-[11px]">{projGroup.projectIcon}</span>
+										{#if famGroup.familyIcon}
+											<span class="text-[11px]">{famGroup.familyIcon}</span>
 										{:else}
-											<span class="w-1.5 h-1.5 rounded-full" style="background:{projGroup.projectColor || '#525252'}"></span>
+											<span class="w-1.5 h-1.5 rounded-full" style="background:{famGroup.familyColor || '#525252'}"></span>
 										{/if}
-										<span class="text-[10px] font-medium text-text-muted">{projGroup.projectName}</span>
+										<span class="text-[10px] font-medium text-text-muted">{famGroup.familyName}</span>
 									</div>
 									<div class="divide-y divide-border/30">
-										{#each projGroup.tasks as dt}
+										{#each famGroup.tasks as dt}
 											<div
 												class="flex items-start gap-3 px-4 py-2 hover:bg-surface/30 transition-colors group cursor-grab active:cursor-grabbing"
 												draggable="true"
@@ -392,6 +407,9 @@
 												<button type="button" onclick={() => openTask(dt.task)} class="w-5 h-5 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all md:opacity-0 md:group-hover:opacity-100 flex-shrink-0" title="open detail">
 													<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
 												</button>
+												{#if dt.projectName !== famGroup.familyName}
+													<span class="text-[10px] text-text-muted flex-shrink-0 max-w-[80px] truncate">{dt.projectName}</span>
+												{/if}
 											</div>
 										{/each}
 									</div>
