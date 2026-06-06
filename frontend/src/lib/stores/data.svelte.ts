@@ -1,133 +1,208 @@
 import { api, type Project, type Task } from '$lib/api';
+import { getToastStore } from '$lib/stores/toast.svelte';
 
 let projects = $state<Project[]>([]);
 let allTasks = $state<Task[]>([]);
 let initialized = $state(false);
+let recentlyAdded = $state<Set<string>>(new Set());
 
 type UndoAction = { do: () => Promise<void>; undo: () => Promise<void> };
 let undoStack: UndoAction[] = [];
 let redoStack: UndoAction[] = [];
 
 export function getDataStore() {
+	const toast = getToastStore();
+
 	async function init() {
 		if (initialized) return;
-		const [p, t] = await Promise.all([api.listProjects(), api.listAllTasks()]);
-		projects = p;
-		allTasks = t;
-		initialized = true;
+		try {
+			const [p, t] = await Promise.all([api.listProjects(), api.listAllTasks()]);
+			projects = p;
+			allTasks = t;
+			initialized = true;
+		} catch (e) {
+			toast.error('Failed to load data');
+			throw e;
+		}
 	}
 
 	async function refreshProjects() {
-		projects = await api.listProjects();
+		try { projects = await api.listProjects(); }
+		catch { toast.error('Failed to refresh projects'); }
 	}
 
 	async function refreshTasks() {
-		allTasks = await api.listAllTasks();
+		try { allTasks = await api.listAllTasks(); }
+		catch { toast.error('Failed to refresh tasks'); }
 	}
 
 	async function refreshAll() {
-		const [p, t] = await Promise.all([api.listProjects(), api.listAllTasks()]);
-		projects = p;
-		allTasks = t;
+		try {
+			const [p, t] = await Promise.all([api.listProjects(), api.listAllTasks()]);
+			projects = p;
+			allTasks = t;
+		} catch { toast.error('Failed to refresh data'); }
 	}
 
-	// Project mutations (optimistic + refresh)
 	async function addProject(data: Parameters<typeof api.createProject>[0]) {
-		const p = await api.createProject(data);
-		projects = [...projects, p];
-		return p;
+		try {
+			const p = await api.createProject(data);
+			projects = [...projects, p];
+			return p;
+		} catch (e) {
+			toast.error('Failed to create project');
+			throw e;
+		}
 	}
 
-	async function updateProject(id: string, data: Partial<Project>) {
-		const updated = await api.updateProject(id, data);
-		projects = projects.map(p => p.id === id ? updated : p);
-		return updated;
+	async function updateProject(id: string, data: Partial<Pick<Project, 'title' | 'description' | 'color' | 'icon' | 'is_archived' | 'position'>>) {
+		const prev = projects.find(p => p.id === id);
+		// Optimistic update
+		if (prev) projects = projects.map(p => p.id === id ? { ...p, ...data } : p);
+		try {
+			const updated = await api.updateProject(id, data);
+			projects = projects.map(p => p.id === id ? updated : p);
+			return updated;
+		} catch (e) {
+			// Rollback
+			if (prev) projects = projects.map(p => p.id === id ? prev : p);
+			toast.error('Failed to update project');
+			throw e;
+		}
 	}
 
 	async function reorderProjects(projectIds: string[]) {
-		// Optimistic: update positions locally
+		const prev = [...projects];
 		projects = projects.map(p => {
 			const idx = projectIds.indexOf(p.id);
 			return idx >= 0 ? { ...p, position: idx } : p;
 		}).sort((a, b) => a.position - b.position);
-		await api.reorderProjects(projectIds);
+		try {
+			await api.reorderProjects(projectIds);
+		} catch {
+			projects = prev;
+			toast.error('Failed to reorder projects');
+		}
 	}
 
 	async function deleteProject(id: string) {
-		await api.deleteProject(id);
-		projects = projects.filter(p => p.id !== id && p.parent_id !== id);
+		try {
+			await api.deleteProject(id);
+			projects = projects.filter(p => p.id !== id && p.parent_id !== id);
+			allTasks = allTasks.filter(t => {
+				const proj = projects.find(p => p.id === t.project_id);
+				return proj !== undefined;
+			});
+		} catch {
+			toast.error('Failed to delete project');
+		}
 	}
 
-	// Task mutations
 	async function addTask(projectId: string, data: Parameters<typeof api.createTask>[1]) {
-		const t = await api.createTask(projectId, data);
-		allTasks = [...allTasks, t];
-		return t;
+		try {
+			const t = await api.createTask(projectId, data);
+			allTasks = [...allTasks, t];
+			recentlyAdded = new Set([...recentlyAdded, t.id]);
+			setTimeout(() => {
+				recentlyAdded = new Set([...recentlyAdded].filter(id => id !== t.id));
+			}, 300);
+			return t;
+		} catch (e) {
+			toast.error('Failed to create task');
+			throw e;
+		}
 	}
 
 	function pushUndo(doFn: () => Promise<void>, undoFn: () => Promise<void>) {
 		undoStack.push({ do: doFn, undo: undoFn });
 		if (undoStack.length > 30) undoStack.shift();
-		redoStack.length = 0; // new action clears redo
+		redoStack.length = 0;
 	}
 
 	async function undo() {
 		const action = undoStack.pop();
 		if (!action) return;
-		await action.undo();
-		redoStack.push(action);
+		try {
+			await action.undo();
+			redoStack.push(action);
+		} catch {
+			toast.error('Failed to undo');
+		}
 	}
 
 	async function redo() {
 		const action = redoStack.pop();
 		if (!action) return;
-		await action.do();
-		undoStack.push(action);
+		try {
+			await action.do();
+			undoStack.push(action);
+		} catch {
+			toast.error('Failed to redo');
+		}
 	}
 
-	async function updateTask(projectId: string, id: string, data: Partial<Task>) {
+	async function updateTask(projectId: string, id: string, data: Partial<Pick<Task, 'title' | 'description' | 'is_done' | 'due_date' | 'position'>>) {
 		const prev = allTasks.find(t => t.id === id);
-		const updated = await api.updateTask(projectId, id, data);
-		allTasks = allTasks.map(t => t.id === id ? updated : t);
-		if (prev && data.is_done !== undefined) {
-			pushUndo(
-				async () => { const r = await api.updateTask(projectId, id, { is_done: data.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
-				async () => { const r = await api.updateTask(projectId, id, { is_done: prev.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
-			);
+		// Optimistic update
+		if (prev) allTasks = allTasks.map(t => t.id === id ? { ...t, ...data } : t);
+		try {
+			const updated = await api.updateTask(projectId, id, data);
+			allTasks = allTasks.map(t => t.id === id ? updated : t);
+			if (prev && data.is_done !== undefined) {
+				pushUndo(
+					async () => { const r = await api.updateTask(projectId, id, { is_done: data.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
+					async () => { const r = await api.updateTask(projectId, id, { is_done: prev.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
+				);
+			}
+			return updated;
+		} catch (e) {
+			// Rollback
+			if (prev) allTasks = allTasks.map(t => t.id === id ? prev : t);
+			toast.error('Failed to update task');
+			throw e;
 		}
-		return updated;
 	}
 
 	async function moveTask(fromProjectId: string, taskId: string, toProjectId: string) {
-		const updated = await api.moveTask(fromProjectId, taskId, toProjectId);
-		allTasks = allTasks.map(t => t.id === taskId ? updated : t);
-		pushUndo(
-			async () => { const r = await api.moveTask(fromProjectId, taskId, toProjectId); allTasks = allTasks.map(t => t.id === taskId ? r : t); },
-			async () => { const r = await api.moveTask(toProjectId, taskId, fromProjectId); allTasks = allTasks.map(t => t.id === taskId ? r : t); },
-		);
-		return updated;
+		try {
+			const updated = await api.moveTask(fromProjectId, taskId, toProjectId);
+			allTasks = allTasks.map(t => t.id === taskId ? updated : t);
+			pushUndo(
+				async () => { const r = await api.moveTask(fromProjectId, taskId, toProjectId); allTasks = allTasks.map(t => t.id === taskId ? r : t); },
+				async () => { const r = await api.moveTask(toProjectId, taskId, fromProjectId); allTasks = allTasks.map(t => t.id === taskId ? r : t); },
+			);
+			return updated;
+		} catch (e) {
+			toast.error('Failed to move task');
+			throw e;
+		}
 	}
 
 	async function deleteTask(projectId: string, id: string) {
 		const deleted = allTasks.find(t => t.id === id);
-		await api.deleteTask(projectId, id);
 		allTasks = allTasks.filter(t => t.id !== id);
-		if (deleted) {
-			let restoredId = '';
-			pushUndo(
-				async () => { await api.deleteTask(projectId, restoredId); allTasks = allTasks.filter(t => t.id !== restoredId); },
-				async () => {
-					const restored = await api.createTask(projectId, { title: deleted.title, description: deleted.description || undefined });
-					restoredId = restored.id;
-					if (deleted.due_date) await api.updateTask(projectId, restored.id, { due_date: deleted.due_date } as any);
-					if (deleted.is_done) await api.updateTask(projectId, restored.id, { is_done: true });
-					allTasks = await api.listAllTasks();
-				},
-			);
+		try {
+			await api.deleteTask(projectId, id);
+			if (deleted) {
+				let restoredId = '';
+				pushUndo(
+					async () => { await api.deleteTask(projectId, restoredId); allTasks = allTasks.filter(t => t.id !== restoredId); },
+					async () => {
+						const restored = await api.createTask(projectId, { title: deleted.title, description: deleted.description || undefined });
+						restoredId = restored.id;
+						if (deleted.due_date) await api.updateTask(projectId, restored.id, { due_date: deleted.due_date });
+						if (deleted.is_done) await api.updateTask(projectId, restored.id, { is_done: true });
+						allTasks = await api.listAllTasks();
+					},
+				);
+			}
+		} catch {
+			// Rollback
+			if (deleted) allTasks = [...allTasks, deleted];
+			toast.error('Failed to delete task');
 		}
 	}
 
-	// Derived helpers
 	function tasksForProject(projectId: string): Task[] {
 		return allTasks.filter(t => t.project_id === projectId);
 	}
@@ -158,6 +233,7 @@ export function getDataStore() {
 		redo,
 		get canUndo() { return undoStack.length > 0; },
 		get canRedo() { return redoStack.length > 0; },
+		get recentlyAdded() { return recentlyAdded; },
 		tasksForProject,
 		reset,
 	};

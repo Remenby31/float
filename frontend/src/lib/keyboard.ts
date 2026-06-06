@@ -1,6 +1,7 @@
 // Simple event bus for keyboard shortcuts
 type Handler = () => void;
 const handlers: Record<string, Handler[]> = {};
+let setupDone = false;
 
 export function onShortcut(key: string, handler: Handler) {
 	if (!handlers[key]) handlers[key] = [];
@@ -11,7 +12,8 @@ export function onShortcut(key: string, handler: Handler) {
 }
 
 export function setupKeyboard() {
-	if (typeof window === 'undefined') return;
+	if (typeof window === 'undefined' || setupDone) return;
+	setupDone = true;
 
 	window.addEventListener('keydown', (e) => {
 		// Don't capture when typing in inputs
@@ -46,9 +48,6 @@ export function setupKeyboard() {
 			return;
 		}
 
-		if (key === 'n') { fire('n'); return; }
-		if (key === '1') { fire('1'); return; }
-		if (key === '2') { fire('2'); return; }
 		if (key === 'escape') { fire('escape'); return; }
 	});
 }

@@ -31,10 +31,10 @@ export const api = {
 
 	// Projects
 	listProjects: () => request<Project[]>('/projects'),
-	createProject: (data: { title: string; description?: string; color?: string; parent_id?: string }) =>
+	createProject: (data: { title: string; description?: string; color?: string; icon?: string; parent_id?: string }) =>
 		request<Project>('/projects', { method: 'POST', body: JSON.stringify(data) }),
 	getProject: (id: string) => request<Project>(`/projects/${id}`),
-	updateProject: (id: string, data: Partial<Project>) =>
+	updateProject: (id: string, data: Partial<Pick<Project, 'title' | 'description' | 'color' | 'icon' | 'is_archived' | 'position'>>) =>
 		request<Project>(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 	deleteProject: (id: string) =>
 		request(`/projects/${id}`, { method: 'DELETE' }),
@@ -42,9 +42,9 @@ export const api = {
 	// Tasks
 	listAllTasks: () => request<Task[]>('/tasks'),
 	listTasks: (projectId: string) => request<Task[]>(`/projects/${projectId}/tasks`),
-	createTask: (projectId: string, data: { title: string; description?: string }) =>
+	createTask: (projectId: string, data: { title: string; description?: string; due_date?: string }) =>
 		request<Task>(`/projects/${projectId}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
-	updateTask: (projectId: string, id: string, data: Partial<Task>) =>
+	updateTask: (projectId: string, id: string, data: Partial<Pick<Task, 'title' | 'description' | 'is_done' | 'due_date' | 'position'>> & { new_project_id?: string }) =>
 		request<Task>(`/projects/${projectId}/tasks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 	deleteTask: (projectId: string, id: string) =>
 		request(`/projects/${projectId}/tasks/${id}`, { method: 'DELETE' }),

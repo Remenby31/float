@@ -101,19 +101,25 @@ export const TaskMention = Node.create({
 
 						const { state } = view;
 						const { $from } = state.selection;
-						const lineStart = $from.start();
-						const lineText = state.doc.textBetween(lineStart, $from.pos);
 
-						const taskRe = /^@(task|done)\s+(.+)$/i;
-						const match = lineText.match(taskRe);
+						// Get text of the current text block (paragraph)
+						const parentNode = $from.parent;
+						if (!parentNode.isTextblock) return false;
+
+						const text = parentNode.textContent;
+						const taskRe = /^@(task|step|done)\s+(.+)$/i;
+						const match = text.match(taskRe);
 						if (!match) return false;
 
-						const id = match[1].toLowerCase();
+						const id = match[1].toLowerCase() === 'done' ? 'done' : 'task';
 						const label = match[2].trim();
 
+						// Delete the entire paragraph content and replace with the node
+						const start = $from.start();
+						const end = $from.end();
 						const tr = state.tr;
-						tr.delete(lineStart, $from.pos);
-						const insertPos = tr.mapping.map(lineStart);
+						tr.delete(start, end);
+						const insertPos = tr.mapping.map(start);
 						tr.insert(insertPos, nodeType.create({ id, label }));
 						view.dispatch(tr);
 						return true;

@@ -70,7 +70,7 @@
 		editingTitle = false;
 		const newTitle = titleEditValue.trim();
 		if (newTitle && newTitle !== task.title) {
-			const updated = await api.updateTask(projectId, task.id, { title: newTitle });
+			const updated = await store.updateTask(projectId, task.id, { title: newTitle });
 			task = updated;
 			onUpdate(updated);
 		}
@@ -86,21 +86,21 @@
 	async function saveDescription(html?: string) {
 		if (!task) return;
 		const desc = html !== undefined ? html : descriptionHtml;
-		const updated = await api.updateTask(projectId, task.id, { description: desc || null } as any);
+		const updated = await store.updateTask(projectId, task.id, { description: desc || null });
 		task = updated;
 		onUpdate(updated);
 	}
 
 	async function onDateChange(date: string | null) {
 		if (!task) return;
-		const updated = await api.updateTask(projectId, task.id, { due_date: date } as any);
+		const updated = await store.updateTask(projectId, task.id, { due_date: date });
 		task = updated;
 		onUpdate(updated);
 	}
 
 	async function toggleDone() {
 		if (!task) return;
-		const updated = await api.updateTask(projectId, task.id, { is_done: !task.is_done });
+		const updated = await store.updateTask(projectId, task.id, { is_done: !task.is_done });
 		task = updated;
 		onUpdate(updated);
 	}
@@ -132,7 +132,7 @@
 
 	async function handleDelete() {
 		if (!task) return;
-		await api.deleteTask(projectId, task.id);
+		await store.deleteTask(projectId, task.id);
 		onDelete(task.id);
 		task = null;
 	}
@@ -297,19 +297,11 @@
 {/if}
 
 <style>
-	.animate-fadeIn { animation: fadeIn 0.15s ease; }
-	.animate-modalIn { animation: modalIn 0.2s cubic-bezier(0, 0, 0.2, 1); }
-	.animate-spin { animation: spin 0.6s linear infinite; }
-	@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-	@keyframes modalIn {
-		from { opacity: 0; transform: translateY(100px); }
-		to { opacity: 1; transform: translateY(0); }
-	}
-	@media (min-width: 768px) {
-		@keyframes modalIn {
-			from { opacity: 0; transform: translateY(8px) scale(0.98); }
-			to { opacity: 1; transform: translateY(0) scale(1); }
+	@media (max-width: 767px) {
+		.animate-modalIn { animation: modalInMobile 0.2s cubic-bezier(0, 0, 0.2, 1); }
+		@keyframes modalInMobile {
+			from { opacity: 0; transform: translateY(100px); }
+			to { opacity: 1; transform: translateY(0); }
 		}
 	}
-	@keyframes spin { to { transform: rotate(360deg); } }
 </style>

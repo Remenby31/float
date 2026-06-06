@@ -2,13 +2,15 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api } from '$lib/api';
+	import { api, type Project } from '$lib/api';
 	import { getTheme } from '$lib/theme.svelte';
 	import { setupKeyboard, onShortcut } from '$lib/keyboard';
 	import { getDataStore } from '$lib/stores/data.svelte';
 	import { startSync } from '$lib/stores/sync';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
+	import DeleteConfirmModal from '$lib/components/DeleteConfirmModal.svelte';
+	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	import { onDestroy } from 'svelte';
 
 	let { children } = $props();
@@ -99,11 +101,11 @@
 	}
 
 	async function updateProjectAppearance(id: string, color: string | null, icon: string | null) {
-		await store.updateProject(id, { color, icon } as any);
+		await store.updateProject(id, { color, icon });
 	}
 
 	let isSubPage = false;
-	let currentProject = null as any;
+	let currentProject: Project | null = null;
 
 	function scrollToProject(id: string) {
 		sidebarOpen = false;
@@ -151,14 +153,6 @@
 		onclick={(e) => { if ((e.target as HTMLElement).closest('a')) sidebarOpen = false; }}
 	>
 		<nav class="flex-1 p-2 pt-3 space-y-0.5 overflow-y-auto">
-			<!-- Overview + Search -->
-			<a
-				href="/app"
-				class="flex items-center gap-2 px-2.5 py-2.5 md:py-1.5 rounded-lg text-sm transition-all {page.url.pathname === '/app' ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50 hover:text-text'}"
-			>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-				overview
-			</a>
 			<button
 				type="button"
 				onclick={() => cmdOpen = true}
@@ -332,8 +326,6 @@
 		transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 		transform: rotate(180deg);
 	}
-	.animate-fadeIn { animation: fadeIn 0.15s ease; }
-	@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 
 	<main class="flex-1 min-h-screen overflow-y-auto md:ml-56">
@@ -341,36 +333,14 @@
 	</main>
 </div>
 
-<!-- Delete confirmation modal -->
 {#if confirmDelete}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center backdrop-blur-[2px]" onclick={() => confirmDelete = null}>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="bg-bg border border-border rounded-xl p-5 w-full max-w-sm shadow-xl" onclick={(e) => e.stopPropagation()}>
-			<h3 class="text-sm font-medium mb-2">delete "{confirmDelete.title}"?</h3>
-			<p class="text-xs text-text-muted mb-4">
-				{#if confirmDelete.hasTasks}
-					this contains tasks that will be permanently deleted.
-				{:else}
-					this will be permanently deleted.
-				{/if}
-			</p>
-			<div class="flex gap-2 justify-end">
-				<button
-					type="button"
-					onclick={() => confirmDelete = null}
-					class="px-3 py-1.5 text-xs text-text-secondary hover:text-text rounded-lg hover:bg-surface transition-all"
-				>cancel</button>
-				<button
-					type="button"
-					onclick={() => doDeleteProject(confirmDelete!.id)}
-					class="px-3 py-1.5 text-xs bg-danger text-white rounded-lg hover:opacity-90 active:scale-[0.98] transition-all"
-				>delete</button>
-			</div>
-		</div>
-	</div>
+	<DeleteConfirmModal
+		title={confirmDelete.title}
+		message={confirmDelete.hasTasks ? 'this contains tasks that will be permanently deleted.' : 'this will be permanently deleted.'}
+		onConfirm={() => doDeleteProject(confirmDelete!.id)}
+		onCancel={() => confirmDelete = null}
+	/>
 {/if}
 
 <CommandPalette bind:open={cmdOpen} />
+<ToastContainer />

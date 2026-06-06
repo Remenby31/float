@@ -44,7 +44,7 @@
 	}
 
 	interface Result {
-		type: 'project' | 'task';
+		type: 'project' | 'task' | 'create';
 		id: string;
 		title: string;
 		projectId?: string;
@@ -65,7 +65,14 @@
 				items.push({ type: 'task', id: t.id, title: t.title, projectId: t.project_id, projectName: proj?.title, isDone: t.is_done });
 			}
 		}
-		return items.slice(0, 12);
+		const searchResults = items.slice(0, 12);
+		// Add "create" as a navigable item
+		const createItem: Result = { type: 'create', id: '__create__', title: q };
+		// If no project matches, put create first (prioritize it)
+		if (items.filter(r => r.type === 'project').length === 0) {
+			return [createItem, ...searchResults];
+		}
+		return [...searchResults, createItem];
 	});
 
 	let projectResults = $derived(results.filter(r => r.type === 'project'));
@@ -80,7 +87,11 @@
 			.filter(p => !q || matches(p.title, q));
 	});
 
-	function navigate(r: Result) {
+	function activate(r: Result) {
+		if (r.type === 'create') {
+			startCreate();
+			return;
+		}
 		const pid = r.type === 'project' ? r.id : r.projectId;
 		open = false;
 		if (page.url.pathname !== '/app') goto('/app');
@@ -120,7 +131,7 @@
 		if (e.key === 'ArrowUp') { e.preventDefault(); selectedIdx = Math.max(selectedIdx - 1, 0); }
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			if (results[selectedIdx]) navigate(results[selectedIdx]);
+			if (results[selectedIdx]) activate(results[selectedIdx]);
 			else if (query.trim()) startCreate();
 		}
 	}
@@ -209,19 +220,22 @@
 				</div>
 
 				<div class="max-h-[50vh] overflow-y-auto">
-					{#if query.trim() && results.length === 0}
-						<!-- No results — offer to create -->
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div class="px-3 py-1" onclick={startCreate}>
-							<div class="flex items-center gap-2.5 px-2 py-3 rounded-lg cursor-pointer transition-colors bg-surface/50 hover:bg-surface text-text">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-text-muted flex-shrink-0">
-									<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-								</svg>
-								<span class="text-sm">create <strong>"{query.trim()}"</strong></span>
+					{#if query.trim() && results.length > 0}
+						{@const createFirst = results[0]?.type === 'create'}
+						{#if createFirst}
+							<!-- Create is first (no project match) -->
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="px-3 py-1" onclick={startCreate}>
+								<div class="flex items-center gap-2.5 px-2 py-2.5 rounded-lg cursor-pointer transition-colors {0 === selectedIdx ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}">
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="flex-shrink-0">
+										<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+									</svg>
+									<span class="text-sm">create <strong>"{query.trim()}"</strong></span>
+								</div>
 							</div>
-						</div>
-					{:else if results.length > 0}
+						{/if}
+
 						{#if projectResults.length > 0}
 							<div class="px-3 pt-2 pb-1">
 								<p class="text-[10px] uppercase tracking-wider text-text-muted font-medium px-1">projects</p>
@@ -229,7 +243,7 @@
 							{#each projectResults as r}
 								<!-- svelte-ignore a11y_click_events_have_key_events -->
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div class="px-3 py-0.5" onclick={() => navigate(r)}>
+								<div class="px-3 py-0.5" onclick={() => activate(r)}>
 									<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors {flatIndex(r) === selectedIdx ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}">
 										<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{store.projects.find(p => p.id === r.id)?.color || '#525252'}"></span>
 										<span class="text-sm truncate">{r.title}</span>
@@ -246,7 +260,7 @@
 							{#each taskResults as r}
 								<!-- svelte-ignore a11y_click_events_have_key_events -->
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div class="px-3 py-0.5" onclick={() => navigate(r)}>
+								<div class="px-3 py-0.5" onclick={() => activate(r)}>
 									<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors {flatIndex(r) === selectedIdx ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}">
 										<span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-text-muted"></span>
 										<span class="text-sm truncate {r.isDone ? 'line-through opacity-50' : ''}">{r.title}</span>
@@ -258,12 +272,13 @@
 							{/each}
 						{/if}
 
-						<!-- Also offer to create even when there are results -->
-						{#if query.trim()}
+						{#if !createFirst}
+							<!-- Create is last (projects matched) -->
+							{@const createIdx = results.findIndex(r => r.type === 'create')}
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div class="px-3 py-0.5 border-t border-border/50 mt-1 pt-1" onclick={startCreate}>
-								<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer text-text-muted hover:bg-surface/50 hover:text-text-secondary transition-colors">
+								<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors {createIdx === selectedIdx ? 'bg-surface text-text' : 'text-text-muted hover:bg-surface/50 hover:text-text-secondary'}">
 									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="flex-shrink-0">
 										<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
 									</svg>
