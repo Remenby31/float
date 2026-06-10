@@ -4,7 +4,7 @@ mod routes;
 mod state;
 
 use axum::Router;
-use sea_orm::Database;
+use sea_orm::{Database, ConnectionTrait};
 use sea_orm_migration::MigratorTrait;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -20,12 +20,14 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://float:float@localhost:5432/float".to_string());
+        .unwrap_or_else(|_| "sqlite://./float.db?mode=rwc".to_string());
     let jwt_secret = std::env::var("JWT_SECRET")
         .unwrap_or_else(|_| "dev-secret-change-in-production".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
 
     let db = Database::connect(&database_url).await?;
+    db.execute_unprepared("PRAGMA journal_mode=WAL").await?;
+    db.execute_unprepared("PRAGMA foreign_keys=ON").await?;
     float_migration::Migrator::up(&db, None).await?;
 
     let state = state::AppState::new(db, jwt_secret);

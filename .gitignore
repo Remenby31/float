@@ -9,3 +9,4 @@ frontend/.svelte-kit/
 .claude/
 .playwright-cli/
 .secrets
+float_backup_20260610.sql

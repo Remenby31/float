@@ -1,20 +1,3 @@
-services:
-  db:
-    image: postgres:16
-    container_name: float-db
-    environment:
-      POSTGRES_USER: float
-      POSTGRES_PASSWORD: float
-      POSTGRES_DB: float
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U float"]
-      interval: 2s
-      start_period: 10s
-    restart: unless-stopped
-
-volumes:
-  pgdata:
+# SQLite is embedded in the API process - no database service needed
+# The database file is created at ./float.db (dev) or /app/data/float.db (Docker)
+# See deploy/docker-compose.yml for the production setup

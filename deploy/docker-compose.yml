@@ -5,15 +5,13 @@ services:
       dockerfile: Dockerfile.api
     container_name: float-api
     environment:
-      DATABASE_URL: postgres://float:float@db:5432/float
+      DATABASE_URL: sqlite:///app/data/float.db?mode=rwc
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       PORT: "3000"
       FILES_DIR: /app/files
     volumes:
       - float-files:/app/files
-    depends_on:
-      db:
-        condition: service_healthy
+      - float-data:/app/data
     restart: unless-stopped
 
   frontend:
@@ -38,21 +36,6 @@ services:
       - frontend
     restart: unless-stopped
 
-  db:
-    image: postgres:16
-    container_name: float-db
-    environment:
-      POSTGRES_USER: float
-      POSTGRES_PASSWORD: float
-      POSTGRES_DB: float
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U float"]
-      interval: 2s
-      start_period: 10s
-    restart: unless-stopped
-
 volumes:
-  pgdata:
   float-files:
+  float-data:
