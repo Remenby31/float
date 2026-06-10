@@ -19,6 +19,16 @@
 	let isMobile = $state(false);
 	let pickerContainer: HTMLDivElement;
 
+	// Portal action: moves element to document.body to escape CSS columns/contain clipping
+	function portal(node: HTMLElement) {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				node.remove();
+			}
+		};
+	}
+
 	const presetColors = [
 		'#EF4444', '#F97316', '#EAB308', '#22C55E',
 		'#06B6D4', '#3B82F6', '#6366F1', '#A855F7',
@@ -108,6 +118,8 @@
 </button>
 
 {#if open}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div use:portal>
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-[55] {isMobile ? 'bg-black/50 backdrop-blur-[2px]' : ''}" onclick={() => open = false}></div>
@@ -176,6 +188,7 @@
 				</div>
 			{/if}
 		{/if}
+	</div>
 	</div>
 {/if}
 

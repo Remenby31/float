@@ -3,6 +3,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 export const TaskMention = Node.create({
 	name: 'taskMention',
+	priority: 200,
 	group: 'block',
 	atom: true,
 
@@ -114,13 +115,11 @@ export const TaskMention = Node.create({
 						const id = match[1].toLowerCase() === 'done' ? 'done' : 'task';
 						const label = match[2].trim();
 
-						// Delete the entire paragraph content and replace with the node
-						const start = $from.start();
-						const end = $from.end();
+						// Replace the entire paragraph with the block node
+						const before = $from.before();
+						const after = $from.after();
 						const tr = state.tr;
-						tr.delete(start, end);
-						const insertPos = tr.mapping.map(start);
-						tr.insert(insertPos, nodeType.create({ id, label }));
+						tr.replaceWith(before, after, nodeType.create({ id, label }));
 						view.dispatch(tr);
 						return true;
 					},

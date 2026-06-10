@@ -407,6 +407,7 @@
 													<!-- svelte-ignore a11y_no_static_element_interactions -->
 													<span
 														class="flex-1 text-sm cursor-text hover:text-text-secondary transition-colors"
+														draggable="false"
 														ondblclick={() => startEditing(dt.task)}
 													>{dt.task.title}</span>
 												{/if}
@@ -674,6 +675,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<span
 				class="flex-1 text-sm cursor-text transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
+				draggable="false"
 				ondblclick={() => startEditing(task)}
 			>{task.title}</span>
 		{/if}
