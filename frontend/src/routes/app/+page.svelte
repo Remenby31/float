@@ -25,6 +25,7 @@
 	let newProjectTitle = $state('');
 	let confirmDelete = $state<{ id: string; title: string } | null>(null);
 	let confirmRecursiveIcon = $state<{ parentId: string; color: string | null; icon: string | null } | null>(null);
+	let expandedOverrides = $state<Record<string, boolean>>({});
 
 	let groups = $derived(store.projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
@@ -179,6 +180,20 @@
 		const tasks = store.tasksForProject(pid);
 		const done = tasks.filter(t => t.is_done).length;
 		return { total: tasks.length, done };
+	}
+
+	function pendingCount(pid: string): number {
+		return store.tasksForProject(pid).filter(t => !t.is_done).length;
+	}
+
+	function isChildExpanded(pid: string): boolean {
+		if (pid in expandedOverrides) return expandedOverrides[pid];
+		const tasks = store.tasksForProject(pid);
+		return tasks.length === 0 || tasks.some(t => !t.is_done);
+	}
+
+	function toggleChildExpanded(pid: string) {
+		expandedOverrides = { ...expandedOverrides, [pid]: !isChildExpanded(pid) };
 	}
 
 	function onDragStart(task: Task) {
@@ -472,8 +487,9 @@
 					{@render taskListWithAdd(store.tasksForProject(grp.id), grp.id)}
 				{:else}
 					<!-- Group: show each project -->
-					{#each children as child}
+					{#each [...children].sort((a, b) => pendingCount(b.id) - pendingCount(a.id)) as child}
 						{@const cStats = projectStats(child.id)}
+						{@const expanded = isChildExpanded(child.id)}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
 							class="border-t transition-colors {dropTargetId === child.id ? 'border-accent bg-accent/5' : 'border-border'}"
@@ -482,7 +498,17 @@
 							ondragleave={() => onDragLeave(child.id)}
 							ondrop={(e) => onDrop(e, child.id)}
 						>
-							<div class="px-4 py-2 bg-surface/15 flex items-center gap-2.5 pl-6 group/child" id="project-{child.id}">
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<div
+								class="px-4 py-2 bg-surface/15 flex items-center gap-2.5 pl-6 group/child cursor-pointer select-none"
+								id="project-{child.id}"
+								onclick={(e) => {
+									if (!(e.target as HTMLElement).closest('button, input')) {
+										toggleChildExpanded(child.id);
+									}
+								}}
+							>
+								<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-text-muted flex-shrink-0 transition-transform {expanded ? 'rotate-90' : ''}"><polyline points="9 6 15 12 9 18"/></svg>
 								<ColorPicker color={child.color || grp.color} icon={child.icon} onchange={(c, i) => updateProjectAppearance(child.id, c, i)} />
 								{#if editingProjectId === child.id}
 									<input
@@ -495,13 +521,18 @@
 								{:else}
 									<!-- svelte-ignore a11y_click_events_have_key_events -->
 									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<span class="flex-1 text-xs font-medium text-text-secondary hover:text-text cursor-text transition-colors" ondblclick={() => startEditingProject(child.id, child.title)}>{child.title}</span>
+									<span class="flex-1 text-xs font-medium text-text-secondary hover:text-text cursor-text transition-colors" ondblclick={(e) => { e.stopPropagation(); startEditingProject(child.id, child.title); }}>{child.title}</span>
+								{/if}
+								{#if !expanded && cStats.total > 0}
+									<span class="text-[10px] text-text-muted flex-shrink-0">{cStats.done}/{cStats.total} ✓</span>
 								{/if}
 								<button type="button" onclick={() => askDeleteProject(child.id)} class="w-4 h-4 flex items-center justify-center text-text-muted hover:text-danger rounded md:opacity-0 md:group-hover/child:opacity-100 transition-all" title="delete">
 									<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 								</button>
 							</div>
-							{@render taskListWithAdd(store.tasksForProject(child.id), child.id, true)}
+							{#if expanded}
+								{@render taskListWithAdd(store.tasksForProject(child.id), child.id, true)}
+							{/if}
 						</div>
 					{/each}
 						<!-- Inline add sub-project -->
