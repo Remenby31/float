@@ -12,7 +12,7 @@ impl MigrationTrait for Migration {
 
         db.execute_unprepared(
             "CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY NOT NULL,
+                id BLOB PRIMARY KEY NOT NULL,
                 email TEXT NOT NULL UNIQUE,
                 username TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
@@ -23,13 +23,13 @@ impl MigrationTrait for Migration {
 
         db.execute_unprepared(
             "CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY NOT NULL,
-                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                id BLOB PRIMARY KEY NOT NULL,
+                user_id BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 title TEXT NOT NULL,
                 description TEXT,
                 color TEXT,
                 icon TEXT,
-                parent_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+                parent_id BLOB REFERENCES projects(id) ON DELETE CASCADE,
                 is_archived INTEGER NOT NULL DEFAULT 0,
                 position INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -39,8 +39,8 @@ impl MigrationTrait for Migration {
 
         db.execute_unprepared(
             "CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY NOT NULL,
-                project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                id BLOB PRIMARY KEY NOT NULL,
+                project_id BLOB NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
                 title TEXT NOT NULL,
                 description TEXT,
                 weight TEXT NOT NULL DEFAULT 'medium',
@@ -55,8 +55,8 @@ impl MigrationTrait for Migration {
 
         db.execute_unprepared(
             "CREATE TABLE IF NOT EXISTS labels (
-                id TEXT PRIMARY KEY NOT NULL,
-                project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                id BLOB PRIMARY KEY NOT NULL,
+                project_id BLOB NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
                 title TEXT NOT NULL,
                 color TEXT NOT NULL DEFAULT '#737373',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -65,8 +65,8 @@ impl MigrationTrait for Migration {
 
         db.execute_unprepared(
             "CREATE TABLE IF NOT EXISTS task_labels (
-                task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-                label_id TEXT NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
+                task_id BLOB NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                label_id BLOB NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
                 PRIMARY KEY (task_id, label_id)
             )"
         ).await?;
