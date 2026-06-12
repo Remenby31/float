@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { Task } from '$lib/api';
+	import type { DatedTask, WeekDay, WeekData } from '$lib/types';
 	import TaskDetail from '$lib/components/TaskDetail.svelte';
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
 	import SmartInput from '$lib/components/SmartInput.svelte';
+	import WeekView from '$lib/components/WeekView.svelte';
 	import DeleteConfirmModal from '$lib/components/DeleteConfirmModal.svelte';
 	import { parseInput } from '$lib/smart-input';
-	import { relativeDate } from '$lib/utils';
+	import { relativeDate, startOfDay, timeLabel, dayLabel } from '$lib/utils';
 	import { getDataStore } from '$lib/stores/data.svelte';
 	import { touchDrag } from '$lib/touch-dnd';
 
@@ -19,7 +21,6 @@
 	let dropTargetId = $state<string | null>(null);
 	let dragProjectId = $state<string | null>(null);
 	let dropProjectTargetId = $state<string | null>(null);
-	let dropDayDate = $state<string | null>(null);
 	let editingProjectId = $state<string | null>(null);
 	let editingProjectTitle = $state('');
 	let addingProjectTo = $state<false | string | 'root'>(false);
@@ -31,30 +32,7 @@
 	let groups = $derived(store.projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
 
-	// Temporal view: group dated tasks by time bucket
-	interface DatedTask {
-		task: Task;
-		projectName: string;
-		projectColor: string | null;
-		projectIcon: string | null;
-		familyId: string;
-		familyName: string;
-		familyColor: string | null;
-		familyIcon: string | null;
-	}
-
-	function startOfDay(d: Date): Date { const r = new Date(d); r.setHours(0,0,0,0); return r; }
-
-	interface WeekDay {
-		date: Date;
-		label: string;
-		dayNum: number;
-		tasks: DatedTask[];
-		overdueTasks: DatedTask[];
-		isToday: boolean;
-	}
-
-	let weekDays = $derived.by(() => {
+	let weekDays: WeekData = $derived.by(() => {
 		const now = startOfDay(new Date());
 		const dow = now.getDay();
 		const monday = new Date(now);
@@ -132,18 +110,6 @@
 		}));
 	}
 
-	function dayLabel(d: string): string {
-		const date = new Date(d);
-		return date.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
-	}
-
-	function timeLabel(d: string): string {
-		const date = new Date(d);
-		const h = date.getHours();
-		const m = date.getMinutes();
-		if (!h && !m) return '';
-		return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-	}
 
 	async function toggleDone(task: Task) {
 		await store.updateTask(task.project_id, task.id, { is_done: !task.is_done });
@@ -233,33 +199,6 @@
 	function onDragEnd() {
 		dragTask = null;
 		dropTargetId = null;
-		dropDayDate = null;
-	}
-
-	function onDayDragOver(e: DragEvent, dateIso: string) {
-		if (!dragTask) return;
-		e.preventDefault();
-		dropDayDate = dateIso;
-	}
-
-	function onDayDragLeave(e: DragEvent, dateIso: string) {
-		const card = e.currentTarget as HTMLElement;
-		const related = e.relatedTarget as Node | null;
-		if (related && card.contains(related)) return;
-		if (dropDayDate === dateIso) dropDayDate = null;
-	}
-
-	async function onDayDrop(e: DragEvent, dateIso: string) {
-		e.preventDefault();
-		dropDayDate = null;
-		if (!dragTask) return;
-		const currentDue = dragTask.due_date ? new Date(dragTask.due_date) : null;
-		const newDate = new Date(dateIso);
-		if (currentDue) {
-			newDate.setHours(currentDue.getHours(), currentDue.getMinutes(), 0, 0);
-		}
-		await store.updateTask(dragTask.project_id, dragTask.id, { due_date: newDate.toISOString() });
-		dragTask = null;
 	}
 
 	function onDragOver(e: DragEvent, projectId: string) {
@@ -404,96 +343,15 @@
 
 	<!-- Week cards -->
 	{#if hasDatedTasks}
-		<div class="mb-8 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-2 week-scroll">
-			{#each weekDays.days as day}
-				{@const allTasks = [...day.overdueTasks, ...day.tasks]}
-				{@const hasContent = allTasks.length > 0}
-				{@const dayIso = day.date.toISOString()}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 md:aspect-[9/16] md:min-h-0' : 'w-[60px] md:w-[60px] md:flex-none md:aspect-[9/16] md:min-h-0'} {dropDayDate === dayIso ? 'border border-accent bg-accent/5' : day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}"
-					ondragover={(e) => onDayDragOver(e, dayIso)}
-					ondragleave={(e) => onDayDragLeave(e, dayIso)}
-					ondrop={(e) => onDayDrop(e, dayIso)}
-				>
-					<div class="px-1.5 py-1.5 {hasContent ? 'border-b border-border/50' : ''} flex items-baseline gap-1 {hasContent ? '' : 'flex-col items-center'}">
-						<span class="text-[10px] font-semibold uppercase tracking-wider {day.isToday ? 'text-text' : 'text-text-muted'}">{day.label}</span>
-						<span class="{hasContent ? 'text-base' : 'text-sm'} font-bold {day.isToday ? 'text-text' : 'text-text-secondary'}">{day.dayNum}</span>
-					</div>
-					{#if hasContent}
-						<div class="flex-1 overflow-y-auto">
-							{#each day.overdueTasks as dt}
-								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''} · overdue`}
-								<div class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-grab active:cursor-grabbing" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip} draggable="true" ondragstart={() => onDragStart(dt.task)} ondragend={onDragEnd}>
-									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-danger)"></button>
-									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
-									{#if editingTaskId === dt.task.id}
-										<div class="flex-1 min-w-0">
-											<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
-										</div>
-									{:else}
-										<!-- svelte-ignore a11y_click_events_have_key_events -->
-										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<span class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
-									{/if}
-									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
-										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
-									</button>
-								</div>
-							{/each}
-							{#each day.tasks as dt}
-								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
-								<div class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-grab active:cursor-grabbing" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip} draggable="true" ondragstart={() => onDragStart(dt.task)} ondragend={onDragEnd}>
-									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
-									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
-									{#if editingTaskId === dt.task.id}
-										<div class="flex-1 min-w-0">
-											<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
-										</div>
-									{:else}
-										<!-- svelte-ignore a11y_click_events_have_key_events -->
-										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<span class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
-									{/if}
-									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
-										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{/each}
-			{#if weekDays.later.length > 0}
-				<div class="flex-shrink-0 w-[85vw] md:w-0 md:flex-1 snap-center border border-border rounded-xl overflow-hidden flex flex-col md:aspect-[9/16] md:min-h-0 bg-surface/20">
-					<div class="px-1.5 py-1.5 border-b border-border/50">
-						<span class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">later</span>
-					</div>
-					<div class="flex-1 overflow-y-auto">
-						{#each weekDays.later as dt}
-							{@const tooltip = `${dt.projectName} · ${dayLabel(dt.task.due_date!)}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
-							<div class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-grab active:cursor-grabbing" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip} draggable="true" ondragstart={() => onDragStart(dt.task)} ondragend={onDragEnd}>
-								<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
-								{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
-								{#if editingTaskId === dt.task.id}
-									<div class="flex-1 min-w-0">
-										<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
-									</div>
-								{:else}
-									<!-- svelte-ignore a11y_click_events_have_key_events -->
-									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<span class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
-								{/if}
-								<span class="text-[10px] text-text-muted flex-shrink-0">{dayLabel(dt.task.due_date!)}</span>
-								<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
-									<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
-								</button>
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
-		</div>
+		<WeekView
+			{weekDays}
+			{editingTaskId}
+			bind:editingTaskValue
+			onToggleDone={toggleDone}
+			onStartEditing={startEditing}
+			onSaveEdit={saveInlineEdit}
+			onOpenTask={openTask}
+		/>
 	{/if}
 
 	<div class="columns-1 md:columns-2 gap-4 space-y-4" style="contain:layout style">
@@ -782,11 +640,3 @@
 	</style>
 </svelte:head>
 
-<style>
-	.week-scroll {
-		scrollbar-width: none;
-	}
-	.week-scroll::-webkit-scrollbar {
-		display: none;
-	}
-</style>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { relativeDate, timeLabel } from '$lib/utils';
+
 	let {
 		value = $bindable<string | null>(null),
 		onchange,
@@ -29,27 +31,10 @@
 
 	let displayValue = $derived.by(() => {
 		if (!value) return '';
-		const d = new Date(value);
-		const datePart = relativeDate(value);
-		const h = d.getHours();
-		const m = d.getMinutes();
-		if (h || m) return `${datePart} ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-		return datePart;
+		const datePart = relativeDate(value, { long: true });
+		const time = timeLabel(value);
+		return time ? `${datePart} ${time}` : datePart;
 	});
-
-	function relativeDate(d: string) {
-		const date = new Date(d);
-		const now = new Date();
-		now.setHours(0, 0, 0, 0);
-		const target = new Date(date);
-		target.setHours(0, 0, 0, 0);
-		const diff = Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-		if (diff === 0) return 'today';
-		if (diff === 1) return 'tomorrow';
-		if (diff === -1) return 'yesterday';
-		if (diff > 0 && diff < 7) return date.toLocaleDateString('en', { weekday: 'long' }).toLowerCase();
-		return date.toLocaleDateString('en', { month: 'short', day: 'numeric' }).toLowerCase();
-	}
 
 	function applyTime(timeStr: string) {
 		if (!value || !timeStr) return;

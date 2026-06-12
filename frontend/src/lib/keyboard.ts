@@ -16,12 +16,13 @@ export function setupKeyboard() {
 	setupDone = true;
 
 	window.addEventListener('keydown', (e) => {
-		// Don't capture when typing in inputs
-		const tag = (e.target as HTMLElement)?.tagName;
-		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) {
-			// Only Escape works in inputs
+		const el = e.target as HTMLElement;
+		const tag = el?.tagName;
+		const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+			|| el?.isContentEditable || !!el?.closest?.('[contenteditable]');
+		if (isEditable) {
 			if (e.key === 'Escape') {
-				(e.target as HTMLElement).blur();
+				el.blur();
 				fire('escape');
 			}
 			return;

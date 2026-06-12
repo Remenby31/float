@@ -1,17 +1,20 @@
+import { setContext, getContext } from 'svelte';
 import { api, type Project, type Task } from '$lib/api';
 import { getToastStore } from '$lib/stores/toast.svelte';
 
-let projects = $state<Project[]>([]);
-let allTasks = $state<Task[]>([]);
-let initialized = $state(false);
-let recentlyAdded = $state<Set<string>>(new Set());
+const STORE_KEY = Symbol('data-store');
 
 type UndoAction = { do: () => Promise<void>; undo: () => Promise<void> };
-let undoStack: UndoAction[] = [];
-let redoStack: UndoAction[] = [];
 
-export function getDataStore() {
+function createDataStore() {
 	const toast = getToastStore();
+
+	let projects = $state<Project[]>([]);
+	let allTasks = $state<Task[]>([]);
+	let initialized = $state(false);
+	let recentlyAdded = $state<Set<string>>(new Set());
+	let undoStack: UndoAction[] = [];
+	let redoStack: UndoAction[] = [];
 
 	async function init() {
 		if (initialized) return;
@@ -57,14 +60,12 @@ export function getDataStore() {
 
 	async function updateProject(id: string, data: Partial<Pick<Project, 'title' | 'description' | 'color' | 'icon' | 'is_archived' | 'position'>>) {
 		const prev = projects.find(p => p.id === id);
-		// Optimistic update
 		if (prev) projects = projects.map(p => p.id === id ? { ...p, ...data } : p);
 		try {
 			const updated = await api.updateProject(id, data);
 			projects = projects.map(p => p.id === id ? updated : p);
 			return updated;
 		} catch (e) {
-			// Rollback
 			if (prev) projects = projects.map(p => p.id === id ? prev : p);
 			toast.error('Failed to update project');
 			throw e;
@@ -143,7 +144,6 @@ export function getDataStore() {
 
 	async function updateTask(projectId: string, id: string, data: Partial<Pick<Task, 'title' | 'description' | 'is_done' | 'due_date' | 'position'>>) {
 		const prev = allTasks.find(t => t.id === id);
-		// Optimistic update
 		if (prev) allTasks = allTasks.map(t => t.id === id ? { ...t, ...data } : t);
 		try {
 			const updated = await api.updateTask(projectId, id, data);
@@ -156,7 +156,6 @@ export function getDataStore() {
 			}
 			return updated;
 		} catch (e) {
-			// Rollback
 			if (prev) allTasks = allTasks.map(t => t.id === id ? prev : t);
 			toast.error('Failed to update task');
 			throw e;
@@ -197,7 +196,6 @@ export function getDataStore() {
 				);
 			}
 		} catch {
-			// Rollback
 			if (deleted) allTasks = [...allTasks, deleted];
 			toast.error('Failed to delete task');
 		}
@@ -237,4 +235,16 @@ export function getDataStore() {
 		tasksForProject,
 		reset,
 	};
+}
+
+export type DataStore = ReturnType<typeof createDataStore>;
+
+export function initDataStore(): DataStore {
+	const store = createDataStore();
+	setContext(STORE_KEY, store);
+	return store;
+}
+
+export function getDataStore(): DataStore {
+	return getContext<DataStore>(STORE_KEY);
 }

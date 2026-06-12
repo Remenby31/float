@@ -5,7 +5,7 @@
 	import { api, type Project } from '$lib/api';
 	import { getTheme } from '$lib/theme.svelte';
 	import { setupKeyboard, onShortcut } from '$lib/keyboard';
-	import { getDataStore } from '$lib/stores/data.svelte';
+	import { initDataStore } from '$lib/stores/data.svelte';
 	import { startSync } from '$lib/stores/sync';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
@@ -14,7 +14,7 @@
 	import { onDestroy } from 'svelte';
 
 	let { children } = $props();
-	const store = getDataStore();
+	const store = initDataStore();
 	let cmdOpen = $state(false);
 	let profileOpen = $state(false);
 	let unsubs: (() => void)[] = [];
