@@ -95,14 +95,17 @@
 				familyIcon: family?.icon || null,
 			};
 			const due = startOfDay(new Date(t.due_date));
-			if (due < now) {
+			if (due < monday) {
 				const todayCard = days.find(d => d.isToday);
 				if (todayCard) todayCard.overdueTasks.push(dt);
 			} else if (due >= endOfWeek) {
 				laterTasks.push(dt);
 			} else {
 				const day = days.find(d => d.date.getTime() === due.getTime());
-				if (day) day.tasks.push(dt);
+				if (day) {
+					if (due < now) day.overdueTasks.push(dt);
+					else day.tasks.push(dt);
+				}
 			}
 		}
 
@@ -405,7 +408,7 @@
 				{@const dayIso = day.date.toISOString()}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 md:aspect-[9/16] md:min-h-0' : 'w-[60px] md:w-[60px] md:flex-none md:aspect-[9/16] md:min-h-0'} {dropDayDate === dayIso ? 'border-2 border-accent ring-2 ring-accent/20 scale-[1.02]' : day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}"
+					class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 md:aspect-[9/16] md:min-h-0' : 'w-[60px] md:w-[60px] md:flex-none md:aspect-[9/16] md:min-h-0'} {dropDayDate === dayIso ? 'border-2 border-accent ring-2 ring-accent/20' : day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}"
 					ondragover={(e) => onDayDragOver(e, dayIso)}
 					ondragleave={() => onDayDragLeave(dayIso)}
 					ondrop={(e) => onDayDrop(e, dayIso)}
