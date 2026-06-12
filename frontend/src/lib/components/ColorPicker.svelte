@@ -86,7 +86,7 @@
 	$effect(() => {
 		if (open && tab === 'icon' && pickerContainer) {
 			// Dynamically import to avoid SSR issues
-			import('emoji-picker-element').then(({ default: Picker }) => {
+			import('emoji-picker-element').then(({ Picker }) => {
 				if (!pickerContainer || pickerContainer.querySelector('emoji-picker')) return;
 				const picker = document.createElement('emoji-picker') as any;
 				picker.setAttribute('class', 'light');

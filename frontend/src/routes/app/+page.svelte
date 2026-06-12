@@ -286,9 +286,8 @@
 		dropProjectTargetId = null;
 	}
 
-	async function onTouchDrop(e: CustomEvent<{ taskId: string; fromProjectId: string; toProjectId: string }>) {
-		const { taskId, fromProjectId, toProjectId } = e.detail;
-		await store.moveTask(fromProjectId, taskId, toProjectId);
+	async function onTouchDrop(detail: { taskId: string; fromProjectId: string; toProjectId: string }) {
+		await store.moveTask(detail.fromProjectId, detail.taskId, detail.toProjectId);
 	}
 
 	// Project management
@@ -673,8 +672,7 @@
 		draggable="true"
 		ondragstart={() => onDragStart(task)}
 		ondragend={onDragEnd}
-		use:touchDrag={{ taskId: task.id, projectId: task.project_id }}
-		ontouchdrop={(e) => onTouchDrop(e)}
+		use:touchDrag={{ taskId: task.id, projectId: task.project_id, onTouchDrop }}
 	>
 		<button
 			type="button"

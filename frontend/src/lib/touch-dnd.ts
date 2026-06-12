@@ -7,7 +7,7 @@ let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
 const DROP_ATTR = 'data-drop-project';
 
-export function touchDrag(node: HTMLElement, params: { taskId: string; projectId: string }) {
+export function touchDrag(node: HTMLElement, params: { taskId: string; projectId: string; onTouchDrop?: (detail: { taskId: string; fromProjectId: string; toProjectId: string }) => void }) {
 	let startX = 0, startY = 0;
 	let dragging = false;
 
@@ -75,10 +75,7 @@ export function touchDrag(node: HTMLElement, params: { taskId: string; projectId
 		if (dragging && currentDropTarget && dragData) {
 			const toProjectId = currentDropTarget.getAttribute(DROP_ATTR);
 			if (toProjectId && toProjectId !== dragData.projectId) {
-				node.dispatchEvent(new CustomEvent('touchdrop', {
-					bubbles: true,
-					detail: { taskId: dragData.taskId, fromProjectId: dragData.projectId, toProjectId },
-				}));
+				params.onTouchDrop?.({ taskId: dragData.taskId, fromProjectId: dragData.projectId, toProjectId });
 			}
 			currentDropTarget.style.outline = '';
 			currentDropTarget.style.outlineOffset = '';
