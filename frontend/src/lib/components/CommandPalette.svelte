@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { api, type Project, type Task } from '$lib/api';
 	import { getDataStore } from '$lib/stores/data.svelte';
+	import { parseInput, getSuggestions, type Suggestion } from '$lib/smart-input';
 
 	let {
 		open = $bindable(false),
@@ -14,6 +16,31 @@
 	let query = $state('');
 	let selectedIdx = $state(0);
 	let inputEl: HTMLInputElement;
+
+	// @ suggestions
+	let atSuggestions = $state<Suggestion[]>([]);
+	let atSelectedIdx = $state(0);
+	let showAtSuggestions = $state(false);
+
+	function onQueryInput() {
+		const words = query.split(/\s/);
+		const last = words[words.length - 1];
+		if (last.startsWith('@') && last.length > 1) {
+			atSuggestions = getSuggestions(last.slice(1), []);
+			atSelectedIdx = 0;
+			showAtSuggestions = atSuggestions.length > 0;
+		} else {
+			showAtSuggestions = false;
+		}
+	}
+
+	function applyAtSuggestion(s: Suggestion) {
+		const words = query.split(/\s/);
+		words[words.length - 1] = `@${s.value}`;
+		query = words.join(' ') + ' ';
+		showAtSuggestions = false;
+		inputEl?.focus();
+	}
 
 	// Step 2: picking a project for new task
 	let creatingTask = $state('');
@@ -28,6 +55,7 @@
 			projectQuery = '';
 			selectedIdx = 0;
 			projectIdx = 0;
+			showAtSuggestions = false;
 			setTimeout(() => inputEl?.focus(), 50);
 		}
 			});
@@ -107,7 +135,8 @@
 	}
 
 	async function createInProject(projectId: string) {
-		await store.addTask(projectId, { title: creatingTask });
+		const parsed = parseInput(creatingTask);
+		await store.addTask(projectId, { title: parsed.title || creatingTask, due_date: parsed.due_date });
 		open = false;
 		if (page.url.pathname !== '/app') goto('/app');
 		setTimeout(() => document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
@@ -115,9 +144,16 @@
 
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
+			if (showAtSuggestions) { showAtSuggestions = false; return; }
 			if (creatingTask) { creatingTask = ''; setTimeout(() => inputEl?.focus(), 50); }
 			else open = false;
 			return;
+		}
+		// @ suggestions take priority
+		if (showAtSuggestions) {
+			if (e.key === 'ArrowDown') { e.preventDefault(); atSelectedIdx = Math.min(atSelectedIdx + 1, atSuggestions.length - 1); return; }
+			if (e.key === 'ArrowUp') { e.preventDefault(); atSelectedIdx = Math.max(atSelectedIdx - 1, 0); return; }
+			if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); applyAtSuggestion(atSuggestions[atSelectedIdx]); return; }
 		}
 		if (creatingTask) {
 			// Step 2: project selection
@@ -156,11 +192,18 @@
 		<div class="bg-bg border border-border rounded-2xl shadow-2xl w-full max-w-xl pointer-events-auto animate-modalIn overflow-hidden">
 
 			{#if creatingTask}
+				{@const parsedPreview = parseInput(creatingTask)}
 				<!-- Step 2: Pick project -->
 				<div class="px-4 py-3 border-b border-border">
 					<div class="flex items-center gap-2 mb-2">
 						<span class="text-[10px] uppercase tracking-wider text-text-muted">new task</span>
-						<span class="text-sm text-text">{creatingTask}</span>
+						<span class="text-sm text-text">{parsedPreview.title || creatingTask}</span>
+						{#if parsedPreview.due_date}
+							{@const d = new Date(parsedPreview.due_date)}
+							<span class="text-[10px] text-text-muted bg-surface border border-border rounded-md px-1.5 py-0.5">
+								{d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}{d.getHours() || d.getMinutes() ? ` ${d.getHours()}h${d.getMinutes().toString().padStart(2, '0')}` : ''}
+							</span>
+						{/if}
 					</div>
 					<div class="flex items-center gap-3">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-text-muted flex-shrink-0">
@@ -213,11 +256,31 @@
 					<input
 						bind:this={inputEl}
 						bind:value={query}
+						oninput={onQueryInput}
 						placeholder="search or create a task..."
 						class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/60 focus:outline-none"
 					/>
 					<kbd class="hidden md:inline text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
 				</div>
+
+				{#if showAtSuggestions}
+					<div class="border-b border-border">
+						{#each atSuggestions as s, i}
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class="px-4 py-2 text-sm flex items-center gap-3 cursor-pointer transition-colors {i === atSelectedIdx ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}"
+								onmousedown={() => applyAtSuggestion(s)}
+							>
+								<span class="text-[9px] uppercase tracking-wider text-text-muted w-8 text-right font-medium">{s.type === 'date' ? 'date' : s.type === 'time' ? 'time' : 'proj'}</span>
+								<span class="flex-1">{s.label}</span>
+								{#if s.description}
+									<span class="text-[11px] text-text-muted">{s.description}</span>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
 
 				<div class="max-h-[50vh] overflow-y-auto">
 					{#if query.trim() && results.length > 0}

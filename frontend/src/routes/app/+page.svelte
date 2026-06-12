@@ -408,7 +408,7 @@
 													<span
 														class="flex-1 text-sm cursor-text hover:text-text-secondary transition-colors"
 														draggable="false"
-														ondblclick={() => startEditing(dt.task)}
+														onclick={() => startEditing(dt.task)}
 													>{dt.task.title}</span>
 												{/if}
 												{#if dt.task.description}
@@ -676,7 +676,7 @@
 			<span
 				class="flex-1 text-sm cursor-text transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
 				draggable="false"
-				ondblclick={() => startEditing(task)}
+				onclick={() => startEditing(task)}
 			>{task.title}</span>
 		{/if}
 		{#if task.description}

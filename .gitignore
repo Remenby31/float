@@ -9,4 +9,5 @@ frontend/.svelte-kit/
 .claude/
 .playwright-cli/
 .secrets
+.mcp.json
 float_backup_20260610.sql
