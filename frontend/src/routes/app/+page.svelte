@@ -388,26 +388,9 @@
 					{#if hasContent}
 						<div class="flex-1 overflow-y-auto">
 							{#each day.overdueTasks as dt}
-								<div class="flex items-start gap-1.5 px-2 py-1 hover:bg-surface/40 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
+								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''} · overdue`}
+								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-1 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-danger)"></button>
-									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
-									{#if editingTaskId === dt.task.id}
-										<div class="flex-1 min-w-0">
-											<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
-										</div>
-									{:else}
-										<!-- svelte-ignore a11y_click_events_have_key_events -->
-										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<span class="flex-1 min-w-0 text-xs text-danger/80 cursor-text hover:text-danger transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
-									{/if}
-									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
-										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
-									</button>
-								</div>
-							{/each}
-							{#each day.tasks as dt}
-								<div class="flex items-start gap-1.5 px-2 py-1 hover:bg-surface/40 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
-									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
 									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 									{#if editingTaskId === dt.task.id}
 										<div class="flex-1 min-w-0">
@@ -418,8 +401,24 @@
 										<!-- svelte-ignore a11y_no_static_element_interactions -->
 										<span class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
 									{/if}
-									{#if timeLabel(dt.task.due_date!)}
-										<span class="text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
+									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
+										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
+									</button>
+								</div>
+							{/each}
+							{#each day.tasks as dt}
+								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
+								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-1 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
+									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
+									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
+									{#if editingTaskId === dt.task.id}
+										<div class="flex-1 min-w-0">
+											<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
+										</div>
+									{:else}
+										<!-- svelte-ignore a11y_click_events_have_key_events -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<span class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
 									{/if}
 									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
 										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
@@ -437,7 +436,8 @@
 					</div>
 					<div class="flex-1 overflow-y-auto">
 						{#each weekDays.later as dt}
-							<div class="flex items-start gap-1.5 px-2 py-1 hover:bg-surface/40 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
+							{@const tooltip = `${dt.projectName} · ${dayLabel(dt.task.due_date!)}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
+							<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-1 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 								<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
 								{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 								{#if editingTaskId === dt.task.id}
