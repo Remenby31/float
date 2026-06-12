@@ -389,7 +389,7 @@
 						<div class="flex-1 overflow-y-auto">
 							{#each day.overdueTasks as dt}
 								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''} · overdue`}
-								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
+								<div class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-danger)"></button>
 									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 									{#if editingTaskId === dt.task.id}
@@ -408,7 +408,7 @@
 							{/each}
 							{#each day.tasks as dt}
 								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
-								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
+								<div class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
 									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 									{#if editingTaskId === dt.task.id}
@@ -437,7 +437,7 @@
 					<div class="flex-1 overflow-y-auto">
 						{#each weekDays.later as dt}
 							{@const tooltip = `${dt.projectName} · ${dayLabel(dt.task.due_date!)}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
-							<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
+							<div class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 								<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
 								{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 								{#if editingTaskId === dt.task.id}
