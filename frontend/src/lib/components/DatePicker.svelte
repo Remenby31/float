@@ -11,7 +11,7 @@
 
 	let open = $state(false);
 	let textInput = $state('');
-	let inputEl: HTMLInputElement;
+	let inputEl = $state<HTMLInputElement>();
 	let timeValue = $state('');
 
 	// Current displayed month for calendar
@@ -284,11 +284,11 @@
 			<!-- Mini calendar -->
 			<div class="p-2">
 				<div class="flex items-center justify-between mb-2 px-1">
-					<button type="button" onclick={prevMonth} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary transition-colors rounded">
+					<button type="button" onclick={prevMonth} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary transition-colors rounded" aria-label="previous month">
 						<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
 					</button>
 					<span class="text-[11px] text-text-secondary font-medium">{monthLabel}</span>
-					<button type="button" onclick={nextMonth} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary transition-colors rounded">
+					<button type="button" onclick={nextMonth} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary transition-colors rounded" aria-label="next month">
 						<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg>
 					</button>
 				</div>

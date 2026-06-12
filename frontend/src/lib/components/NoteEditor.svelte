@@ -79,8 +79,7 @@
 		editor?.destroy();
 	});
 
-	// Update editor content when parent switches tasks
-	let lastContent = content;
+	let lastContent = $state(content);
 	$effect(() => {
 		if (editor && content !== lastContent) {
 			lastContent = content;
@@ -107,8 +106,8 @@
 			class="absolute z-10 flex items-center gap-0.5 bg-elevated border border-border rounded-lg shadow-lg px-1 py-0.5"
 			style="left:{Math.max(0, toolbarPos.x)}px; top:{Math.max(0, toolbarPos.y)}px"
 		>
-			<button type="button" onmousedown={(e) => { e.preventDefault(); editor?.chain().focus().toggleBold().run(); }} class="w-6 h-6 rounded flex items-center justify-center text-xs transition-colors {isBold ? 'bg-surface text-text' : 'text-text-muted hover:text-text'}"><strong>B</strong></button>
-			<button type="button" onmousedown={(e) => { e.preventDefault(); editor?.chain().focus().toggleItalic().run(); }} class="w-6 h-6 rounded flex items-center justify-center text-xs transition-colors {isItalic ? 'bg-surface text-text' : 'text-text-muted hover:text-text'}"><em>I</em></button>
+			<button type="button" onmousedown={(e) => { e.preventDefault(); editor?.chain().focus().toggleBold().run(); }} class="w-6 h-6 rounded flex items-center justify-center text-xs transition-colors {isBold ? 'bg-surface text-text' : 'text-text-muted hover:text-text'}" aria-label="bold"><strong>B</strong></button>
+			<button type="button" onmousedown={(e) => { e.preventDefault(); editor?.chain().focus().toggleItalic().run(); }} class="w-6 h-6 rounded flex items-center justify-center text-xs transition-colors {isItalic ? 'bg-surface text-text' : 'text-text-muted hover:text-text'}" aria-label="italic"><em>I</em></button>
 			<div class="w-px h-4 bg-border mx-0.5"></div>
 			<button type="button" onmousedown={(e) => { e.preventDefault(); editor?.chain().focus().toggleBulletList().run(); }} class="w-6 h-6 rounded flex items-center justify-center transition-colors {isBulletList ? 'bg-surface text-text' : 'text-text-muted hover:text-text'}">
 				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>

@@ -15,7 +15,7 @@
 
 	let query = $state('');
 	let selectedIdx = $state(0);
-	let inputEl: HTMLInputElement;
+	let inputEl = $state<HTMLInputElement>();
 
 	// @ suggestions
 	let atSuggestions = $state<Suggestion[]>([]);
@@ -46,7 +46,7 @@
 	let creatingTask = $state('');
 	let projectQuery = $state('');
 	let projectIdx = $state(0);
-	let projectInputEl: HTMLInputElement;
+	let projectInputEl = $state<HTMLInputElement>();
 
 	$effect(() => {
 		if (open) {

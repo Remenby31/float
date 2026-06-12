@@ -36,7 +36,9 @@
 	);
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+	role="listitem"
 	class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-grab active:cursor-grabbing"
 	style="background-color:{dt.projectColor || '#525252'}15"
 	title={tooltip}
@@ -49,6 +51,7 @@
 		onclick={() => onToggleDone(dt.task)}
 		class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
 		style="border-color:{isOverdue ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
+	aria-label="toggle done"
 	></button>
 	{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 	{#if editingTaskId === dt.task.id}

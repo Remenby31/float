@@ -17,7 +17,7 @@
 	let popoverStyle = $state('');
 	let customColor = $state('');
 	let isMobile = $state(false);
-	let pickerContainer: HTMLDivElement;
+	let pickerContainer = $state<HTMLDivElement>();
 
 	// Portal action: moves element to document.body to escape CSS columns/contain clipping
 	function portal(node: HTMLElement) {
@@ -91,8 +91,8 @@
 				const picker = document.createElement('emoji-picker') as any;
 				picker.setAttribute('class', 'light');
 				pickerContainer.appendChild(picker);
-				picker.addEventListener('emoji-click', (e: any) => {
-					pickIcon(e.detail.unicode);
+				picker.addEventListener('emoji-click', (e: Event) => {
+					pickIcon((e as CustomEvent).detail.unicode);
 				});
 				// Apply theme
 				const isDark = !document.documentElement.classList.contains('light');
@@ -153,6 +153,7 @@
 							onclick={() => pickColor(c)}
 							class="w-7 h-7 rounded-lg transition-all hover:scale-110 {!icon && color === c ? 'ring-2 ring-offset-1 ring-offset-bg ring-text/30' : ''}"
 							style="background:{c}"
+							aria-label="color {c}"
 						></button>
 					{/each}
 				</div>

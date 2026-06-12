@@ -22,7 +22,7 @@
 	let suggestions = $state<Suggestion[]>([]);
 	let selectedIdx = $state(0);
 	let showSuggestions = $state(false);
-	let inputEl: HTMLInputElement | HTMLTextAreaElement;
+	let inputEl = $state<HTMLInputElement | HTMLTextAreaElement>();
 	let inline = $derived(className.includes('inline-edit'));
 
 	// Parsed preview of current input

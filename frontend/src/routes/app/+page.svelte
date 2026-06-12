@@ -6,8 +6,9 @@
 	import SmartInput from '$lib/components/SmartInput.svelte';
 	import WeekView from '$lib/components/WeekView.svelte';
 	import DeleteConfirmModal from '$lib/components/DeleteConfirmModal.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { parseInput } from '$lib/smart-input';
-	import { relativeDate, startOfDay, timeLabel, dayLabel } from '$lib/utils';
+	import { relativeDate, startOfDay } from '$lib/utils';
 	import { getDataStore } from '$lib/stores/data.svelte';
 	import { touchDrag } from '$lib/touch-dnd';
 
@@ -95,21 +96,6 @@
 		weekDays.later.length > 0
 	);
 
-	function groupByFamily(items: DatedTask[]): { familyName: string; familyColor: string | null; familyIcon: string | null; tasks: DatedTask[] }[] {
-		const map = new Map<string, DatedTask[]>();
-		for (const dt of items) {
-			const key = dt.familyId;
-			if (!map.has(key)) map.set(key, []);
-			map.get(key)!.push(dt);
-		}
-		return Array.from(map.values()).map(group => ({
-			familyName: group[0].familyName,
-			familyColor: group[0].familyColor,
-			familyIcon: group[0].familyIcon,
-			tasks: group,
-		}));
-	}
-
 
 	async function toggleDone(task: Task) {
 		await store.updateTask(task.project_id, task.id, { is_done: !task.is_done });
@@ -117,10 +103,7 @@
 
 	async function addTaskFromInput(projectId: string, parsed: ReturnType<typeof parseInput>) {
 		if (!parsed.title) return;
-		const t = await store.addTask(projectId, { title: parsed.title });
-		if (parsed.due_date) {
-			await store.updateTask(projectId, t.id, { due_date: parsed.due_date });
-		}
+		await store.addTask(projectId, { title: parsed.title, due_date: parsed.due_date });
 		addInputs[projectId] = '';
 		addInputs = { ...addInputs };
 	}
@@ -143,15 +126,15 @@
 	async function saveInlineEdit(task: Task, parsed?: ReturnType<typeof parseInput>) {
 		if (editingTaskId === task.id) editingTaskId = null;
 		if (!parsed) parsed = parseInput(editingTaskValue);
-		const updates: any = {};
+		const updates: Partial<Pick<Task, 'title' | 'due_date'>> = {};
 		if (parsed.title && parsed.title !== task.title) updates.title = parsed.title;
 		if (parsed.due_date) updates.due_date = parsed.due_date;
 		if (Object.keys(updates).length === 0) return;
 		await store.updateTask(task.project_id, task.id, updates);
 	}
 
-	function onTaskUpdate() { store.refreshTasks(); }
-	function onTaskDelete() { selectedTask = null; store.refreshTasks(); }
+	function onTaskUpdate() {}
+	function onTaskDelete() { selectedTask = null; }
 
 	async function updateProjectAppearance(id: string, color: string | null, icon: string | null) {
 		await store.updateProject(id, { color, icon });
@@ -302,7 +285,7 @@
 				const task = store.allTasks.find(t => t.id === taskId);
 				if (task && val.trim() && val.trim() !== task.title) {
 					const parsed = parseInput(val);
-					const updates: any = {};
+					const updates: Partial<Pick<Task, 'title' | 'due_date'>> = {};
 					if (parsed.title && parsed.title !== task.title) updates.title = parsed.title;
 					if (parsed.due_date) updates.due_date = parsed.due_date;
 					if (Object.keys(updates).length > 0) {
@@ -505,20 +488,13 @@
 {/if}
 
 {#if confirmRecursiveIcon}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center backdrop-blur-[2px]" onclick={() => confirmRecursiveIcon = null}>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="bg-bg border border-border rounded-xl p-5 w-full max-w-sm shadow-xl" onclick={(e) => e.stopPropagation()}>
-			<h3 class="text-sm font-medium mb-2">apply to sub-projects?</h3>
-			<p class="text-xs text-text-muted mb-4">apply {confirmRecursiveIcon.icon} to all sub-projects in this group?</p>
-			<div class="flex gap-2 justify-end">
-				<button type="button" onclick={() => confirmRecursiveIcon = null} class="px-3 py-1.5 text-xs text-text-secondary hover:text-text rounded-lg hover:bg-surface transition-all">no</button>
-				<button type="button" onclick={applyIconRecursively} class="px-3 py-1.5 text-xs bg-accent text-accent-fg rounded-lg hover:opacity-90 active:scale-[0.98] transition-all">yes, apply</button>
-			</div>
-		</div>
-	</div>
+	<ConfirmModal
+		title="apply to sub-projects?"
+		message="apply {confirmRecursiveIcon.icon} to all sub-projects in this group?"
+		confirmLabel="yes, apply"
+		onConfirm={applyIconRecursively}
+		onCancel={() => confirmRecursiveIcon = null}
+	/>
 {/if}
 
 {#snippet taskListWithAdd(tasks: Task[], projectId: string, indented?: boolean)}
@@ -620,23 +596,23 @@
 {/snippet}
 
 {#if selectedProjectId}
-	<TaskDetail
-		bind:task={selectedTask}
-		projectId={selectedProjectId}
-		onUpdate={onTaskUpdate}
-		onDelete={onTaskDelete}
-	/>
+	{#key selectedTask?.id}
+		<TaskDetail
+			bind:task={selectedTask}
+			projectId={selectedProjectId}
+			onUpdate={onTaskUpdate}
+			onDelete={onTaskDelete}
+		/>
+	{/key}
 {/if}
 
 
-<svelte:head>
-	<style>
-		@keyframes checkPop {
-			0% { transform: scale(1); }
-			50% { transform: scale(1.3); }
-			100% { transform: scale(1); }
-		}
-		button:active .check-pop { animation: checkPop 0.2s ease; }
-	</style>
-</svelte:head>
+<style>
+	@keyframes checkPop {
+		0% { transform: scale(1); }
+		50% { transform: scale(1.3); }
+		100% { transform: scale(1); }
+	}
+	:global(button:active .check-pop) { animation: checkPop 0.2s ease; }
+</style>
 

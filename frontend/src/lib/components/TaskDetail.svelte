@@ -40,7 +40,7 @@
 	let uploading = $state(false);
 	let confirmingDelete = $state(false);
 	let showProjectPicker = $state(false);
-	let fileInput: HTMLInputElement;
+	let fileInput = $state<HTMLInputElement>();
 
 	// Available leaf projects (no children) for move
 	let leafProjects = $derived(
@@ -171,12 +171,11 @@
 							onkeydown={handleTitleKeydown}
 						/>
 					{:else}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<h3
-							class="text-lg font-medium cursor-text hover:text-text-secondary transition-colors leading-snug {task.is_done ? 'line-through text-text-muted' : ''}"
+						<button
+							type="button"
+							class="text-lg font-medium cursor-text hover:text-text-secondary transition-colors leading-snug text-left {task.is_done ? 'line-through text-text-muted' : ''}"
 							onclick={() => { editingTitle = true; titleEditValue = task?.title || ''; }}
-						>{task.title}</h3>
+						>{task.title}</button>
 					{/if}
 				</div>
 				<div class="flex items-center gap-1 flex-shrink-0">

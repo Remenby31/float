@@ -25,8 +25,8 @@
 			const res = await api.login({ email, password });
 			localStorage.setItem('float_token', res.token);
 			goto('/app');
-		} catch (e: any) {
-			error = e.message || 'login failed';
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'login failed';
 			triggerShake();
 		}
 		submitting = false;
