@@ -242,7 +242,10 @@
 		dropDayDate = dateIso;
 	}
 
-	function onDayDragLeave(dateIso: string) {
+	function onDayDragLeave(e: DragEvent, dateIso: string) {
+		const card = e.currentTarget as HTMLElement;
+		const related = e.relatedTarget as Node | null;
+		if (related && card.contains(related)) return;
 		if (dropDayDate === dateIso) dropDayDate = null;
 	}
 
@@ -410,7 +413,7 @@
 				<div
 					class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 md:aspect-[9/16] md:min-h-0' : 'w-[60px] md:w-[60px] md:flex-none md:aspect-[9/16] md:min-h-0'} {dropDayDate === dayIso ? 'border-2 border-accent ring-2 ring-accent/20' : day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}"
 					ondragover={(e) => onDayDragOver(e, dayIso)}
-					ondragleave={() => onDayDragLeave(dayIso)}
+					ondragleave={(e) => onDayDragLeave(e, dayIso)}
 					ondrop={(e) => onDayDrop(e, dayIso)}
 				>
 					<div class="px-1.5 py-1.5 {hasContent ? 'border-b border-border/50' : ''} flex items-baseline gap-1 {hasContent ? '' : 'flex-col items-center'}">
