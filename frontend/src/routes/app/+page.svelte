@@ -373,12 +373,12 @@
 
 	<!-- Week cards -->
 	{#if hasDatedTasks}
-		<div class="mb-8 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 week-scroll">
+		<div class="mb-8 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-2 week-scroll">
 			{#each weekDays.days as day}
 				{@const allTasks = [...day.overdueTasks, ...day.tasks]}
 				{@const hasContent = allTasks.length > 0}
 				<div class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 min-h-[180px] max-h-[300px]' : 'w-[60px] md:w-[60px] md:flex-none min-h-[180px]'} {day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}">
-					<div class="px-2 py-2 {hasContent ? 'border-b border-border/50' : ''} flex items-baseline gap-1 {hasContent ? '' : 'flex-col items-center'}">
+					<div class="px-1.5 py-1.5 {hasContent ? 'border-b border-border/50' : ''} flex items-baseline gap-1 {hasContent ? '' : 'flex-col items-center'}">
 						<span class="text-[10px] font-semibold uppercase tracking-wider {day.isToday ? 'text-text' : 'text-text-muted'}">{day.label}</span>
 						<span class="{hasContent ? 'text-base' : 'text-sm'} font-bold {day.isToday ? 'text-text' : 'text-text-secondary'}">{day.dayNum}</span>
 						{#if day.isToday}
@@ -389,7 +389,7 @@
 						<div class="flex-1 overflow-y-auto">
 							{#each day.overdueTasks as dt}
 								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''} · overdue`}
-								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-1 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
+								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-danger)"></button>
 									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 									{#if editingTaskId === dt.task.id}
@@ -408,7 +408,7 @@
 							{/each}
 							{#each day.tasks as dt}
 								{@const tooltip = `${dt.projectName}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
-								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-1 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
+								<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
 									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 									{#if editingTaskId === dt.task.id}
@@ -431,13 +431,13 @@
 			{/each}
 			{#if weekDays.later.length > 0}
 				<div class="flex-shrink-0 w-[85vw] md:w-0 md:flex-1 snap-center border border-border rounded-xl overflow-hidden flex flex-col min-h-[180px] max-h-[300px] bg-surface/20">
-					<div class="px-2 py-2 border-b border-border/50">
+					<div class="px-1.5 py-1.5 border-b border-border/50">
 						<span class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">later</span>
 					</div>
 					<div class="flex-1 overflow-y-auto">
 						{#each weekDays.later as dt}
 							{@const tooltip = `${dt.projectName} · ${dayLabel(dt.task.due_date!)}${timeLabel(dt.task.due_date!) ? ' · ' + timeLabel(dt.task.due_date!) : ''}`}
-							<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-1 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
+							<div class="flex items-start gap-1.5 px-2 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task" style="background-color:{dt.projectColor || '#525252'}15" title={tooltip}>
 								<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
 								{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 								{#if editingTaskId === dt.task.id}
