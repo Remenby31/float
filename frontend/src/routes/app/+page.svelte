@@ -19,6 +19,7 @@
 	let dropTargetId = $state<string | null>(null);
 	let dragProjectId = $state<string | null>(null);
 	let dropProjectTargetId = $state<string | null>(null);
+	let dropDayDate = $state<string | null>(null);
 	let editingProjectId = $state<string | null>(null);
 	let editingProjectTitle = $state('');
 	let addingProjectTo = $state<false | string | 'root'>(false);
@@ -229,6 +230,30 @@
 	function onDragEnd() {
 		dragTask = null;
 		dropTargetId = null;
+		dropDayDate = null;
+	}
+
+	function onDayDragOver(e: DragEvent, dateIso: string) {
+		if (!dragTask) return;
+		e.preventDefault();
+		dropDayDate = dateIso;
+	}
+
+	function onDayDragLeave(dateIso: string) {
+		if (dropDayDate === dateIso) dropDayDate = null;
+	}
+
+	async function onDayDrop(e: DragEvent, dateIso: string) {
+		e.preventDefault();
+		dropDayDate = null;
+		if (!dragTask) return;
+		const currentDue = dragTask.due_date ? new Date(dragTask.due_date) : null;
+		const newDate = new Date(dateIso);
+		if (currentDue) {
+			newDate.setHours(currentDue.getHours(), currentDue.getMinutes(), 0, 0);
+		}
+		await store.updateTask(dragTask.project_id, dragTask.id, { due_date: newDate.toISOString() });
+		dragTask = null;
 	}
 
 	function onDragOver(e: DragEvent, projectId: string) {
@@ -377,13 +402,17 @@
 			{#each weekDays.days as day}
 				{@const allTasks = [...day.overdueTasks, ...day.tasks]}
 				{@const hasContent = allTasks.length > 0}
-				<div class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 min-h-[180px] max-h-[300px]' : 'w-[60px] md:w-[60px] md:flex-none min-h-[180px]'} {day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}">
+				{@const dayIso = day.date.toISOString()}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 md:aspect-[9/16] md:min-h-0' : 'w-[60px] md:w-[60px] md:flex-none md:aspect-[9/16] md:min-h-0'} {dropDayDate === dayIso ? 'border-2 border-accent ring-2 ring-accent/20 scale-[1.02]' : day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}"
+					ondragover={(e) => onDayDragOver(e, dayIso)}
+					ondragleave={() => onDayDragLeave(dayIso)}
+					ondrop={(e) => onDayDrop(e, dayIso)}
+				>
 					<div class="px-1.5 py-1.5 {hasContent ? 'border-b border-border/50' : ''} flex items-baseline gap-1 {hasContent ? '' : 'flex-col items-center'}">
 						<span class="text-[10px] font-semibold uppercase tracking-wider {day.isToday ? 'text-text' : 'text-text-muted'}">{day.label}</span>
 						<span class="{hasContent ? 'text-base' : 'text-sm'} font-bold {day.isToday ? 'text-text' : 'text-text-secondary'}">{day.dayNum}</span>
-						{#if day.isToday}
-							<span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
-						{/if}
 					</div>
 					{#if hasContent}
 						<div class="flex-1 overflow-y-auto">
@@ -430,7 +459,7 @@
 				</div>
 			{/each}
 			{#if weekDays.later.length > 0}
-				<div class="flex-shrink-0 w-[85vw] md:w-0 md:flex-1 snap-center border border-border rounded-xl overflow-hidden flex flex-col min-h-[180px] max-h-[300px] bg-surface/20">
+				<div class="flex-shrink-0 w-[85vw] md:w-0 md:flex-1 snap-center border border-border rounded-xl overflow-hidden flex flex-col md:aspect-[9/16] md:min-h-0 bg-surface/20">
 					<div class="px-1.5 py-1.5 border-b border-border/50">
 						<span class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">later</span>
 					</div>
