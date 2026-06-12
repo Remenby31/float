@@ -398,7 +398,7 @@
 									{:else}
 										<!-- svelte-ignore a11y_click_events_have_key_events -->
 										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<span class="flex-1 min-w-0 text-xs text-danger/80 truncate cursor-text hover:text-danger transition-colors" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
+										<span class="flex-1 min-w-0 text-xs text-danger/80 cursor-text hover:text-danger transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
 									{/if}
 									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
 										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
@@ -416,7 +416,7 @@
 									{:else}
 										<!-- svelte-ignore a11y_click_events_have_key_events -->
 										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<span class="flex-1 min-w-0 text-xs truncate cursor-text hover:text-text-secondary transition-colors" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
+										<span class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
 									{/if}
 									{#if timeLabel(dt.task.due_date!)}
 										<span class="text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
@@ -447,7 +447,7 @@
 								{:else}
 									<!-- svelte-ignore a11y_click_events_have_key_events -->
 									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<span class="flex-1 min-w-0 text-xs truncate cursor-text hover:text-text-secondary transition-colors" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
+									<span class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
 								{/if}
 								<span class="text-[10px] text-text-muted flex-shrink-0">{dayLabel(dt.task.due_date!)}</span>
 								<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
