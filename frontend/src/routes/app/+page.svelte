@@ -373,73 +373,71 @@
 
 	<!-- Week cards -->
 	{#if hasDatedTasks}
-		<div class="mb-8 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 week-scroll">
+		<div class="mb-8 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 week-scroll">
 			{#each weekDays.days as day}
 				{@const allTasks = [...day.overdueTasks, ...day.tasks]}
-				<div class="flex-shrink-0 w-[85vw] md:w-0 md:flex-1 snap-center border rounded-xl overflow-hidden flex flex-col min-h-[200px] max-h-[320px] {day.isToday ? 'border-text/30 bg-surface/40' : allTasks.length > 0 ? 'border-border bg-bg' : 'border-border/50 bg-bg opacity-50'}">
-					<div class="px-3 py-2.5 border-b border-border/50 flex items-baseline gap-1.5">
-						<span class="text-xs font-semibold uppercase tracking-wider {day.isToday ? 'text-text' : 'text-text-muted'}">{day.label}</span>
-						<span class="text-lg font-bold {day.isToday ? 'text-text' : 'text-text-secondary'}">{day.dayNum}</span>
+				{@const hasContent = allTasks.length > 0}
+				<div class="flex-shrink-0 snap-center rounded-xl overflow-hidden flex flex-col transition-all {hasContent ? 'w-[85vw] md:w-0 md:flex-1 min-h-[180px] max-h-[300px]' : 'w-[60px] md:w-[60px] md:flex-none min-h-[180px]'} {day.isToday ? 'border border-text/30 bg-surface/50' : hasContent ? 'border border-border bg-surface/20' : 'bg-surface/10'}">
+					<div class="px-2 py-2 {hasContent ? 'border-b border-border/50' : ''} flex items-baseline gap-1 {hasContent ? '' : 'flex-col items-center'}">
+						<span class="text-[10px] font-semibold uppercase tracking-wider {day.isToday ? 'text-text' : 'text-text-muted'}">{day.label}</span>
+						<span class="{hasContent ? 'text-base' : 'text-sm'} font-bold {day.isToday ? 'text-text' : 'text-text-secondary'}">{day.dayNum}</span>
 						{#if day.isToday}
-							<span class="w-1.5 h-1.5 rounded-full bg-accent ml-0.5"></span>
+							<span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
 						{/if}
 					</div>
-					<div class="flex-1 overflow-y-auto">
-						{#each day.overdueTasks as dt}
-							<div class="flex items-start gap-2 px-3 py-1.5 hover:bg-surface/30 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
-								<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-danger)"></button>
-								{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
-								{#if editingTaskId === dt.task.id}
-									<div class="flex-1 min-w-0">
-										<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
-									</div>
-								{:else}
-									<!-- svelte-ignore a11y_click_events_have_key_events -->
-									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<span class="flex-1 min-w-0 text-xs text-danger/80 truncate cursor-text hover:text-danger transition-colors" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
-								{/if}
-								<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
-									<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
-								</button>
-							</div>
-						{/each}
-						{#each day.tasks as dt}
-							<div class="flex items-start gap-2 px-3 py-1.5 hover:bg-surface/30 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
-								<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
-								{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
-								{#if editingTaskId === dt.task.id}
-									<div class="flex-1 min-w-0">
-										<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
-									</div>
-								{:else}
-									<!-- svelte-ignore a11y_click_events_have_key_events -->
-									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<span class="flex-1 min-w-0 text-xs truncate cursor-text hover:text-text-secondary transition-colors" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
-								{/if}
-								{#if timeLabel(dt.task.due_date!)}
-									<span class="text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
-								{/if}
-								<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
-									<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
-								</button>
-							</div>
-						{/each}
-						{#if allTasks.length === 0}
-							<div class="flex items-center justify-center h-full">
-								<span class="text-[10px] text-text-muted/50">—</span>
-							</div>
-						{/if}
-					</div>
+					{#if hasContent}
+						<div class="flex-1 overflow-y-auto">
+							{#each day.overdueTasks as dt}
+								<div class="flex items-start gap-1.5 px-2 py-1 hover:bg-surface/40 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
+									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-danger)"></button>
+									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
+									{#if editingTaskId === dt.task.id}
+										<div class="flex-1 min-w-0">
+											<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
+										</div>
+									{:else}
+										<!-- svelte-ignore a11y_click_events_have_key_events -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<span class="flex-1 min-w-0 text-xs text-danger/80 truncate cursor-text hover:text-danger transition-colors" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
+									{/if}
+									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
+										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
+									</button>
+								</div>
+							{/each}
+							{#each day.tasks as dt}
+								<div class="flex items-start gap-1.5 px-2 py-1 hover:bg-surface/40 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
+									<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
+									{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
+									{#if editingTaskId === dt.task.id}
+										<div class="flex-1 min-w-0">
+											<SmartInput bind:value={editingTaskValue} placeholder={dt.task.title} onSubmit={(parsed) => saveInlineEdit(dt.task, parsed)} onBlurSubmit={false} class="inline-edit" />
+										</div>
+									{:else}
+										<!-- svelte-ignore a11y_click_events_have_key_events -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<span class="flex-1 min-w-0 text-xs truncate cursor-text hover:text-text-secondary transition-colors" draggable="false" onclick={() => startEditing(dt.task)}>{dt.task.title}</span>
+									{/if}
+									{#if timeLabel(dt.task.due_date!)}
+										<span class="text-[10px] text-text-muted flex-shrink-0">{timeLabel(dt.task.due_date!)}</span>
+									{/if}
+									<button type="button" onclick={() => openTask(dt.task)} class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" title="open">
+										<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/each}
 			{#if weekDays.later.length > 0}
-				<div class="flex-shrink-0 w-[85vw] md:w-0 md:flex-1 snap-center border border-border rounded-xl overflow-hidden flex flex-col min-h-[200px] max-h-[320px]">
-					<div class="px-3 py-2.5 border-b border-border/50">
-						<span class="text-xs font-semibold uppercase tracking-wider text-text-muted">later</span>
+				<div class="flex-shrink-0 w-[85vw] md:w-0 md:flex-1 snap-center border border-border rounded-xl overflow-hidden flex flex-col min-h-[180px] max-h-[300px] bg-surface/20">
+					<div class="px-2 py-2 border-b border-border/50">
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">later</span>
 					</div>
 					<div class="flex-1 overflow-y-auto">
 						{#each weekDays.later as dt}
-							<div class="flex items-start gap-2 px-3 py-1.5 hover:bg-surface/30 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
+							<div class="flex items-start gap-1.5 px-2 py-1 hover:bg-surface/40 transition-colors group border-l-2" style="border-color:{dt.projectColor || '#525252'}">
 								<button type="button" onclick={() => toggleDone(dt.task)} class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success" style="border-color:var(--color-border-strong)"></button>
 								{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
 								{#if editingTaskId === dt.task.id}
