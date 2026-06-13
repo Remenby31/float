@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { DatedTask } from '$lib/types';
 	import type { Task } from '$lib/api';
-	import { parseInput } from '$lib/smart-input';
 	import { timeLabel, dayLabel } from '$lib/utils';
 
 	let {
@@ -10,7 +9,6 @@
 		showDayLabel = false,
 		hoveredTaskId = $bindable<string | null>(null),
 		onToggleDone,
-		onSaveEdit,
 		onOpenTask,
 		onDragStart,
 		onDragEnd,
@@ -20,7 +18,6 @@
 		showDayLabel?: boolean;
 		hoveredTaskId?: string | null;
 		onToggleDone: (task: Task) => void;
-		onSaveEdit: (task: Task, parsed?: ReturnType<typeof parseInput>) => void;
 		onOpenTask: (task: Task) => void;
 		onDragStart: (task: Task) => void;
 		onDragEnd: () => void;
@@ -34,12 +31,12 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	role="listitem"
-	class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-grab active:cursor-grabbing {hoveredTaskId === dt.task.id ? 'ring-1 ring-accent/40' : ''}"
+	class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-pointer {hoveredTaskId === dt.task.id ? 'ring-1 ring-accent/40' : ''}"
 	style="background-color:{dt.projectColor || '#525252'}15"
 	onmouseenter={() => hoveredTaskId = dt.task.id}
 	onmouseleave={() => { if (hoveredTaskId === dt.task.id) hoveredTaskId = null; }}
 	onclick={(e) => {
-		if ((e.target as HTMLElement).closest('button, input, textarea, [contenteditable], span[draggable]')) return;
+		if ((e.target as HTMLElement).closest('button')) return;
 		onOpenTask(dt.task);
 	}}
 	title={tooltip}
@@ -52,31 +49,15 @@
 		onclick={() => onToggleDone(dt.task)}
 		class="w-3.5 h-3.5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all hover:border-success hover:bg-success"
 		style="border-color:{isOverdue ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
-	aria-label="toggle done"
+		aria-label="toggle done"
 	></button>
 	{#if dt.projectIcon}
 		<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>
 	{:else}
 		<span class="w-2 h-2 rounded-full flex-shrink-0 mt-1" style="background:{dt.projectColor || '#525252'}"></span>
 	{/if}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<span
-		class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words outline-none"
-		draggable="false"
-		contenteditable="true"
-		role="textbox"
-		onblur={(e) => {
-			const newText = (e.target as HTMLElement).textContent?.trim() || '';
-			if (newText && newText !== dt.task.title) {
-				const parsed = parseInput(newText);
-				onSaveEdit(dt.task, parsed);
-			}
-		}}
-		onkeydown={(e) => {
-			if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); }
-			if (e.key === 'Escape') { (e.target as HTMLElement).textContent = dt.task.title; (e.target as HTMLElement).blur(); }
-		}}
+		class="flex-1 min-w-0 text-xs transition-colors break-words hover:text-text-secondary"
 	>{dt.task.title}</span>
 	{#if showDayLabel}
 		<span class="text-[10px] text-text-muted flex-shrink-0">{dayLabel(dt.task.due_date!)}</span>

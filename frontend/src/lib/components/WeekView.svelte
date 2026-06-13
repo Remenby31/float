@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { WeekData } from '$lib/types';
 	import type { Task } from '$lib/api';
-	import type { parseInput } from '$lib/smart-input';
 	import WeekTaskRow from './WeekTaskRow.svelte';
 	import { getDataStore } from '$lib/stores/data.svelte';
 
@@ -9,13 +8,11 @@
 		weekDays,
 		hoveredTaskId = $bindable<string | null>(null),
 		onToggleDone,
-		onSaveEdit,
 		onOpenTask,
 	}: {
 		weekDays: WeekData;
 		hoveredTaskId: string | null;
 		onToggleDone: (task: Task) => void;
-		onSaveEdit: (task: Task, parsed?: ReturnType<typeof parseInput>) => void;
 		onOpenTask: (task: Task) => void;
 	} = $props();
 
@@ -84,10 +81,10 @@
 			{#if hasContent}
 				<div class="flex-1 overflow-y-auto">
 					{#each day.overdueTasks as dt}
-						<WeekTaskRow {dt} isOverdue {onToggleDone} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
+						<WeekTaskRow {dt} isOverdue {onToggleDone} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
 					{/each}
 					{#each day.tasks as dt}
-						<WeekTaskRow {dt} {onToggleDone} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
+						<WeekTaskRow {dt} {onToggleDone} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
 					{/each}
 				</div>
 			{/if}
@@ -100,7 +97,7 @@
 			</div>
 			<div class="flex-1 overflow-y-auto">
 				{#each weekDays.later as dt}
-					<WeekTaskRow {dt} showDayLabel {onToggleDone} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
+					<WeekTaskRow {dt} showDayLabel {onToggleDone} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
 				{/each}
 			</div>
 		</div>
