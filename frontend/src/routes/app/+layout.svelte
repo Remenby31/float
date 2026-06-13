@@ -108,7 +108,7 @@
 	let currentProject: Project | null = null;
 
 	function scrollToProject(id: string) {
-		sidebarOpen = false;
+		setTimeout(() => { sidebarOpen = false; }, 100);
 		if (page.url.pathname !== '/app') {
 			goto('/app');
 			setTimeout(() => {
@@ -127,13 +127,13 @@
 </script>
 
 <div class="min-h-screen bg-bg flex flex-col md:flex-row">
-	<header class="flex items-center justify-between px-4 py-3 border-b border-border bg-bg sticky top-0 z-30" style="padding-top: calc(0.75rem + env(safe-area-inset-top, 0px))">
-		<button type="button" onclick={() => sidebarOpen = true} class="w-10 h-10 flex items-center justify-center -ml-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all" aria-label="open menu">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+	<header class="flex items-center gap-2 px-3 py-2 bg-bg sticky top-0 z-30" style="padding-top: calc(0.5rem + env(safe-area-inset-top, 0px))">
+		<button type="button" onclick={() => sidebarOpen = !sidebarOpen} class="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all" aria-label="toggle menu">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 		</button>
-		<span class="text-sm font-semibold tracking-tight">float</span>
-		<button type="button" onclick={() => cmdOpen = true} class="w-10 h-10 flex items-center justify-center -mr-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all" aria-label="search">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+		<div class="flex-1"></div>
+		<button type="button" onclick={() => cmdOpen = true} class="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all" aria-label="search">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 		</button>
 	</header>
 
@@ -152,10 +152,16 @@
 		style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px)"
 		onclick={(e) => { if ((e.target as HTMLElement).closest('a')) sidebarOpen = false; }}
 	>
-		<nav class="flex-1 p-2 pt-3 space-y-0.5 overflow-y-auto">
+		<div class="flex items-center justify-between px-3 pt-3 pb-1">
+			<span class="text-xs font-semibold tracking-wider text-text-muted uppercase">float</span>
+			<button type="button" onclick={() => sidebarOpen = false} class="w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all" aria-label="close menu">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+			</button>
+		</div>
+		<nav class="flex-1 p-2 space-y-0.5 overflow-y-auto">
 			<button
 				type="button"
-				onclick={() => cmdOpen = true}
+				onclick={() => { cmdOpen = true; sidebarOpen = false; }}
 				class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm text-text-secondary hover:bg-surface/50 hover:text-text transition-all w-full"
 			>
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
