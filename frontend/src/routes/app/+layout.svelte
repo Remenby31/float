@@ -126,14 +126,13 @@
 	}
 </script>
 
-<div class="min-h-screen bg-bg flex flex-col md:flex-row">
-	<header class="flex items-center gap-2 px-3 py-2 bg-bg sticky top-0 z-30" style="padding-top: calc(0.5rem + env(safe-area-inset-top, 0px))">
-		<button type="button" onclick={() => sidebarOpen = !sidebarOpen} class="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all" aria-label="toggle menu">
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+<div class="min-h-screen bg-bg">
+	<header class="fixed bottom-0 left-0 z-30 flex items-center gap-1 px-2 py-2 bg-bg/80 backdrop-blur-md rounded-tr-xl" style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px))">
+		<button type="button" onclick={() => sidebarOpen = !sidebarOpen} class="w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface/80 transition-all" aria-label="toggle menu">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 		</button>
-		<div class="flex-1"></div>
-		<button type="button" onclick={() => cmdOpen = true} class="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface transition-all" aria-label="search">
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+		<button type="button" onclick={() => cmdOpen = true} class="w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface/80 transition-all" aria-label="search">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 		</button>
 	</header>
 
@@ -334,7 +333,7 @@
 	}
 </style>
 
-	<main class="flex-1 min-h-screen overflow-y-auto">
+	<main class="min-h-screen">
 		{@render children()}
 	</main>
 </div>
