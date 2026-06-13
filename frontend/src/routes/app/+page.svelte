@@ -344,7 +344,7 @@
 
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<section
-				class="border rounded-xl overflow-hidden transition-all break-inside-avoid {dropProjectTargetId === grp.id ? 'border-accent ring-2 ring-accent/20 scale-[1.01]' : dropTargetId === grp.id && children.length === 0 ? 'border-accent ring-2 ring-accent/20' : 'border-border'} {dragProjectId === grp.id ? 'opacity-40' : ''}"
+				class="group/project border rounded-xl overflow-hidden transition-all break-inside-avoid {dropProjectTargetId === grp.id ? 'border-accent ring-2 ring-accent/20 scale-[1.01]' : dropTargetId === grp.id && children.length === 0 ? 'border-accent ring-2 ring-accent/20' : 'border-border'} {dragProjectId === grp.id ? 'opacity-40' : ''}"
 				data-drop-project={children.length === 0 ? grp.id : undefined}
 				ondragover={(e) => { if (dragProjectId) onProjectDragOver(e, grp.id); else if (children.length === 0) onDragOver(e, grp.id); }}
 				ondragleave={() => { if (dragProjectId) onProjectDragLeave(grp.id); else if (children.length === 0) onDragLeave(grp.id); }}
@@ -387,7 +387,7 @@
 					{@render taskListWithAdd(store.tasksForProject(grp.id), grp.id)}
 				{:else}
 					<!-- Group: show each project -->
-					{#each [...children].sort((a, b) => pendingCount(b.id) - pendingCount(a.id)) as child}
+					{#each [...children].filter(c => store.tasksForProject(c.id).length > 0).sort((a, b) => pendingCount(b.id) - pendingCount(a.id)) as child}
 						{@const cStats = projectStats(child.id)}
 						{@const expanded = isChildExpanded(child.id)}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -511,24 +511,12 @@
 		</div>
 	{/if}
 	{@render addRow(projectId, indented)}
-	{#if done.length > 0 || olderDone.length > 0}
-		{#if done.length > 0}
-			<div class="divide-y divide-border/50 border-t border-border/30">
-				{#each done as task (task.id)}
-					{@render taskRow(task, indented)}
-				{/each}
-			</div>
-		{/if}
-		{#if olderDone.length > 0}
-			<details class="{done.length === 0 ? 'border-t border-border/30' : ''}">
-				<summary class="px-4 py-1.5 text-[10px] text-text-muted cursor-pointer select-none hover:text-text-secondary transition-colors">+{olderDone.length} completed</summary>
-				<div class="divide-y divide-border/50">
-					{#each olderDone as task (task.id)}
-						{@render taskRow(task, indented)}
-					{/each}
-				</div>
-			</details>
-		{/if}
+	{#if done.length > 0}
+		<div class="divide-y divide-border/50 border-t border-border/30">
+			{#each done as task (task.id)}
+				{@render taskRow(task, indented)}
+			{/each}
+		</div>
 	{/if}
 {/snippet}
 
@@ -584,7 +572,7 @@
 
 {#snippet addRow(projectId: string, indented?: boolean)}
 	{@const val = getInput(projectId)}
-	<div class="flex items-center gap-3 px-4 py-1.5 {indented ? 'pl-6 border-t border-border/30' : 'border-t border-border/50'}">
+	<div class="flex items-center gap-3 px-4 py-1 {indented ? 'pl-6' : ''} opacity-0 group-hover/project:opacity-100 focus-within:opacity-100 transition-opacity h-0 group-hover/project:h-auto focus-within:h-auto overflow-hidden">
 		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-50"></div>
 		<SmartInput
 			value={val}
