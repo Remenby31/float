@@ -53,9 +53,13 @@
 		style="border-color:{isOverdue ? 'var(--color-danger)' : 'var(--color-border-strong)'}"
 	aria-label="toggle done"
 	></button>
-	{#if dt.projectIcon}<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>{/if}
+	{#if dt.projectIcon}
+		<span class="text-[10px] flex-shrink-0 mt-0.5">{dt.projectIcon}</span>
+	{:else}
+		<span class="w-2 h-2 rounded-full flex-shrink-0 mt-1" style="background:{dt.projectColor || '#525252'}"></span>
+	{/if}
 	{#if editingTaskId === dt.task.id}
-		<div class="flex-1 min-w-0">
+		<div class="flex-1 min-w-0 text-xs">
 			<SmartInput
 				bind:value={editingTaskValue}
 				placeholder={dt.task.title}

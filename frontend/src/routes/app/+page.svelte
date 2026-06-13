@@ -552,7 +552,7 @@
 			{/if}
 		</button>
 		{#if editingTaskId === task.id}
-			<div class="flex-1">
+			<div class="flex-1 text-sm">
 				<SmartInput
 					bind:value={editingTaskValue}
 					placeholder={task.title}
