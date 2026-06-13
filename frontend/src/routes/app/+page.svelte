@@ -555,7 +555,7 @@
 			{/if}
 		</button>
 		{#if editingTaskId === task.id}
-			<div class="flex-1 text-sm">
+			<div class="flex-1 text-sm leading-5">
 				<SmartInput
 					bind:value={editingTaskValue}
 					placeholder={task.title}
@@ -568,7 +568,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<span
-				class="flex-1 text-sm cursor-text transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
+				class="flex-1 text-sm leading-5 cursor-text transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
 				draggable="false"
 				onclick={() => startEditing(task)}
 			>{task.title}</span>

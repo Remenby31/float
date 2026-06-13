@@ -114,8 +114,8 @@
 				{placeholder}
 				autofocus
 				rows="1"
-				class="w-full bg-transparent border-none px-0 py-0 text-text placeholder:text-text-muted/50 focus:outline-none transition-all resize-none overflow-hidden leading-normal"
-			style="font-size:inherit"
+				class="w-full bg-transparent border-none px-0 py-0 m-0 text-text placeholder:text-text-muted/50 focus:outline-none transition-all resize-none overflow-hidden"
+			style="font-size:inherit;line-height:inherit;min-height:0;height:auto"
 			></textarea>
 		{:else}
 			<input
