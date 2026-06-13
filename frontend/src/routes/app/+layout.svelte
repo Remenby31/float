@@ -127,8 +127,7 @@
 </script>
 
 <div class="min-h-screen bg-bg flex flex-col md:flex-row">
-	<!-- Mobile top bar -->
-	<header class="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-bg sticky top-0 z-30" style="padding-top: calc(0.75rem + env(safe-area-inset-top, 0px))">
+	<header class="flex items-center justify-between px-4 py-3 border-b border-border bg-bg sticky top-0 z-30" style="padding-top: calc(0.75rem + env(safe-area-inset-top, 0px))">
 		<button type="button" onclick={() => sidebarOpen = true} class="w-10 h-10 flex items-center justify-center -ml-2 rounded-lg text-text-secondary hover:text-text hover:bg-surface transition-all" aria-label="open menu">
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 		</button>
@@ -142,14 +141,14 @@
 	{#if sidebarOpen}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-[2px] animate-fadeIn" onclick={() => sidebarOpen = false}></div>
+		<div class="fixed inset-0 bg-black/50 z-40 backdrop-blur-[2px] animate-fadeIn" onclick={() => sidebarOpen = false}></div>
 	{/if}
 
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<aside
 		role="navigation"
-		class="fixed inset-y-0 left-0 z-50 w-64 border-r border-border flex flex-col select-none bg-bg transform transition-transform duration-200 ease-out md:w-56 md:transform-none {sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}"
+		class="fixed inset-y-0 left-0 z-50 w-64 border-r border-border flex flex-col select-none bg-bg transform transition-transform duration-200 ease-out {sidebarOpen ? 'translate-x-0' : '-translate-x-full'}"
 		style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px)"
 		onclick={(e) => { if ((e.target as HTMLElement).closest('a')) sidebarOpen = false; }}
 	>
@@ -329,7 +328,7 @@
 	}
 </style>
 
-	<main class="flex-1 min-h-screen overflow-y-auto md:ml-56">
+	<main class="flex-1 min-h-screen overflow-y-auto">
 		{@render children()}
 	</main>
 </div>
