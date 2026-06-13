@@ -330,11 +330,8 @@
 	{#if hasDatedTasks}
 		<WeekView
 			{weekDays}
-			{editingTaskId}
-			bind:editingTaskValue
 			bind:hoveredTaskId
 			onToggleDone={toggleDone}
-			onStartEditing={startEditing}
 			onSaveEdit={saveInlineEdit}
 			onOpenTask={openTask}
 		/>
@@ -554,25 +551,27 @@
 				<svg class="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>
 			{/if}
 		</button>
-		{#if editingTaskId === task.id}
-			<div class="flex-1 text-sm leading-5">
-				<SmartInput
-					bind:value={editingTaskValue}
-					placeholder={task.title}
-					onSubmit={(parsed) => saveInlineEdit(task, parsed)}
-					onBlurSubmit={false}
-					class="inline-edit"
-				/>
-			</div>
-		{:else}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<span
-				class="flex-1 text-sm leading-5 cursor-text transition-colors {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
-				draggable="false"
-				onclick={() => startEditing(task)}
-			>{task.title}</span>
-		{/if}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<span
+			class="flex-1 text-sm leading-5 cursor-text transition-colors outline-none {task.is_done ? 'line-through text-text-muted' : 'hover:text-text-secondary'}"
+			draggable="false"
+			contenteditable="true"
+			role="textbox"
+			onclick={() => startEditing(task)}
+			onblur={(e) => {
+				const newText = (e.target as HTMLElement).textContent?.trim() || '';
+				if (newText && newText !== task.title) {
+					const parsed = parseInput(newText);
+					saveInlineEdit(task, parsed);
+				}
+				if (editingTaskId === task.id) editingTaskId = null;
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); }
+				if (e.key === 'Escape') { (e.target as HTMLElement).textContent = task.title; (e.target as HTMLElement).blur(); }
+			}}
+		>{task.title}</span>
 		{#if task.description}
 			<svg class="w-3 h-3 text-text-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
 		{/if}

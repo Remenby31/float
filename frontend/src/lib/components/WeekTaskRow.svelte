@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { DatedTask } from '$lib/types';
 	import type { Task } from '$lib/api';
-	import SmartInput from './SmartInput.svelte';
 	import { parseInput } from '$lib/smart-input';
 	import { timeLabel, dayLabel } from '$lib/utils';
 
@@ -9,11 +8,8 @@
 		dt,
 		isOverdue = false,
 		showDayLabel = false,
-		editingTaskId = null,
-		editingTaskValue = $bindable(''),
 		hoveredTaskId = $bindable<string | null>(null),
 		onToggleDone,
-		onStartEditing,
 		onSaveEdit,
 		onOpenTask,
 		onDragStart,
@@ -22,11 +18,8 @@
 		dt: DatedTask;
 		isOverdue?: boolean;
 		showDayLabel?: boolean;
-		editingTaskId?: string | null;
-		editingTaskValue?: string;
 		hoveredTaskId?: string | null;
 		onToggleDone: (task: Task) => void;
-		onStartEditing: (task: Task) => void;
 		onSaveEdit: (task: Task, parsed?: ReturnType<typeof parseInput>) => void;
 		onOpenTask: (task: Task) => void;
 		onDragStart: (task: Task) => void;
@@ -66,25 +59,25 @@
 	{:else}
 		<span class="w-2 h-2 rounded-full flex-shrink-0 mt-1" style="background:{dt.projectColor || '#525252'}"></span>
 	{/if}
-	{#if editingTaskId === dt.task.id}
-		<div class="flex-1 min-w-0 text-xs">
-			<SmartInput
-				bind:value={editingTaskValue}
-				placeholder={dt.task.title}
-				onSubmit={(parsed) => onSaveEdit(dt.task, parsed)}
-				onBlurSubmit={false}
-				class="inline-edit"
-			/>
-		</div>
-	{:else}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<span
-			class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words"
-			draggable="false"
-			onclick={() => onStartEditing(dt.task)}
-		>{dt.task.title}</span>
-	{/if}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<span
+		class="flex-1 min-w-0 text-xs cursor-text hover:text-text-secondary transition-colors break-words outline-none"
+		draggable="false"
+		contenteditable="true"
+		role="textbox"
+		onblur={(e) => {
+			const newText = (e.target as HTMLElement).textContent?.trim() || '';
+			if (newText && newText !== dt.task.title) {
+				const parsed = parseInput(newText);
+				onSaveEdit(dt.task, parsed);
+			}
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); }
+			if (e.key === 'Escape') { (e.target as HTMLElement).textContent = dt.task.title; (e.target as HTMLElement).blur(); }
+		}}
+	>{dt.task.title}</span>
 	{#if showDayLabel}
 		<span class="text-[10px] text-text-muted flex-shrink-0">{dayLabel(dt.task.due_date!)}</span>
 	{/if}
