@@ -9,6 +9,7 @@
 		weekDays,
 		editingTaskId,
 		editingTaskValue = $bindable(''),
+		hoveredTaskId = $bindable<string | null>(null),
 		onToggleDone,
 		onStartEditing,
 		onSaveEdit,
@@ -17,6 +18,7 @@
 		weekDays: WeekData;
 		editingTaskId: string | null;
 		editingTaskValue: string;
+		hoveredTaskId: string | null;
 		onToggleDone: (task: Task) => void;
 		onStartEditing: (task: Task) => void;
 		onSaveEdit: (task: Task, parsed?: ReturnType<typeof parseInput>) => void;
@@ -88,10 +90,10 @@
 			{#if hasContent}
 				<div class="flex-1 overflow-y-auto">
 					{#each day.overdueTasks as dt}
-						<WeekTaskRow {dt} isOverdue {editingTaskId} bind:editingTaskValue {onToggleDone} {onStartEditing} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} />
+						<WeekTaskRow {dt} isOverdue {editingTaskId} bind:editingTaskValue {onToggleDone} {onStartEditing} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
 					{/each}
 					{#each day.tasks as dt}
-						<WeekTaskRow {dt} {editingTaskId} bind:editingTaskValue {onToggleDone} {onStartEditing} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} />
+						<WeekTaskRow {dt} {editingTaskId} bind:editingTaskValue {onToggleDone} {onStartEditing} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
 					{/each}
 				</div>
 			{/if}
@@ -104,7 +106,7 @@
 			</div>
 			<div class="flex-1 overflow-y-auto">
 				{#each weekDays.later as dt}
-					<WeekTaskRow {dt} showDayLabel {editingTaskId} bind:editingTaskValue {onToggleDone} {onStartEditing} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} />
+					<WeekTaskRow {dt} showDayLabel {editingTaskId} bind:editingTaskValue {onToggleDone} {onStartEditing} {onSaveEdit} {onOpenTask} {onDragStart} {onDragEnd} bind:hoveredTaskId />
 				{/each}
 			</div>
 		</div>

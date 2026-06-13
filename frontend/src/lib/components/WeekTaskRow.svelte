@@ -11,6 +11,7 @@
 		showDayLabel = false,
 		editingTaskId = null,
 		editingTaskValue = $bindable(''),
+		hoveredTaskId = $bindable<string | null>(null),
 		onToggleDone,
 		onStartEditing,
 		onSaveEdit,
@@ -23,6 +24,7 @@
 		showDayLabel?: boolean;
 		editingTaskId?: string | null;
 		editingTaskValue?: string;
+		hoveredTaskId?: string | null;
 		onToggleDone: (task: Task) => void;
 		onStartEditing: (task: Task) => void;
 		onSaveEdit: (task: Task, parsed?: ReturnType<typeof parseInput>) => void;
@@ -39,8 +41,14 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	role="listitem"
-	class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-grab active:cursor-grabbing"
+	class="flex items-start gap-1.5 px-1 py-1 rounded-md mx-0.5 my-0.5 transition-colors group week-task cursor-grab active:cursor-grabbing {hoveredTaskId === dt.task.id ? 'ring-1 ring-accent/40' : ''}"
 	style="background-color:{dt.projectColor || '#525252'}15"
+	onmouseenter={() => hoveredTaskId = dt.task.id}
+	onmouseleave={() => { if (hoveredTaskId === dt.task.id) hoveredTaskId = null; }}
+	onclick={(e) => {
+		if ((e.target as HTMLElement).closest('button, input, textarea, [contenteditable], span[draggable]')) return;
+		onOpenTask(dt.task);
+	}}
 	title={tooltip}
 	draggable="true"
 	ondragstart={() => onDragStart(dt.task)}
@@ -80,12 +88,4 @@
 	{#if showDayLabel}
 		<span class="text-[10px] text-text-muted flex-shrink-0">{dayLabel(dt.task.due_date!)}</span>
 	{/if}
-	<button
-		type="button"
-		onclick={() => onOpenTask(dt.task)}
-		class="w-4 h-4 rounded flex items-center justify-center text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-		title="open"
-	>
-		<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
-	</button>
 </div>

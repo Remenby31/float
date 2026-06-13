@@ -29,6 +29,8 @@
 	let confirmDelete = $state<{ id: string; title: string } | null>(null);
 	let confirmRecursiveIcon = $state<{ parentId: string; color: string | null; icon: string | null } | null>(null);
 	let expandedOverrides = $state<Record<string, boolean>>({});
+	let addingTaskTo = $state<string | null>(null);
+	let hoveredTaskId = $state<string | null>(null);
 
 	let groups = $derived(store.projects.filter(p => !p.parent_id));
 	let childrenOf = $derived((pid: string) => store.projects.filter(p => p.parent_id === pid));
@@ -330,6 +332,7 @@
 			{weekDays}
 			{editingTaskId}
 			bind:editingTaskValue
+			bind:hoveredTaskId
 			onToggleDone={toggleDone}
 			onStartEditing={startEditing}
 			onSaveEdit={saveInlineEdit}
@@ -373,9 +376,15 @@
 						<span class="flex-1 text-sm font-medium cursor-text hover:text-text-secondary transition-colors" ondblclick={() => startEditingProject(grp.id, grp.title)}>{grp.title}</span>
 					{/if}
 					<div class="flex items-center gap-0.5 md:opacity-0 md:group-hover/header:opacity-100 transition-opacity">
-						<button type="button" onclick={() => { addingProjectTo = grp.id; newProjectTitle = ''; }} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary rounded transition-colors" title="add sub-project">
-							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-						</button>
+						{#if children.length > 0}
+							<button type="button" onclick={() => { addingProjectTo = grp.id; newProjectTitle = ''; }} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary rounded transition-colors" title="add sub-project">
+								<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+							</button>
+						{:else}
+							<button type="button" onclick={() => { addingTaskTo = grp.id; }} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-text-secondary rounded transition-colors" title="add task">
+								<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+							</button>
+						{/if}
 						<button type="button" onclick={() => askDeleteProject(grp.id)} class="w-5 h-5 flex items-center justify-center text-text-muted hover:text-danger rounded transition-colors" title="delete">
 							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						</button>
@@ -523,7 +532,13 @@
 {#snippet taskRow(task: Task, indented?: boolean)}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="flex items-start gap-3 px-4 py-2 hover:bg-surface/30 transition-colors group cursor-grab active:cursor-grabbing {indented ? 'pl-6' : ''} {store.recentlyAdded.has(task.id) ? 'task-appear' : ''}"
+		class="flex items-start gap-3 px-4 py-1.5 transition-colors group cursor-grab active:cursor-grabbing {indented ? 'pl-6' : ''} {store.recentlyAdded.has(task.id) ? 'task-appear' : ''} {hoveredTaskId === task.id ? 'bg-accent/8' : 'hover:bg-surface/30'}"
+		onmouseenter={() => hoveredTaskId = task.id}
+		onmouseleave={() => { if (hoveredTaskId === task.id) hoveredTaskId = null; }}
+		onclick={(e) => {
+			if ((e.target as HTMLElement).closest('button, input, textarea, [contenteditable], span[draggable]')) return;
+			openTask(task);
+		}}
 		draggable="true"
 		ondragstart={() => onDragStart(task)}
 		ondragend={onDragEnd}
@@ -564,23 +579,24 @@
 		{#if task.due_date}
 			<span class="text-[10px] text-text-muted w-12 text-right flex-shrink-0">{relativeDate(task.due_date)}</span>
 		{/if}
-		<button type="button" onclick={() => openTask(task)} class="w-5 h-5 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-surface transition-all md:opacity-0 md:group-hover:opacity-100 flex-shrink-0" title="open detail">
-			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-		</button>
 	</div>
 {/snippet}
 
 {#snippet addRow(projectId: string, indented?: boolean)}
 	{@const val = getInput(projectId)}
-	<div class="flex items-center gap-3 px-4 py-1 {indented ? 'pl-6' : ''} opacity-0 group-hover/project:opacity-100 focus-within:opacity-100 transition-opacity h-0 group-hover/project:h-auto focus-within:h-auto overflow-hidden">
-		<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-50"></div>
-		<SmartInput
-			value={val}
-			placeholder="new task..."
-			onSubmit={(parsed) => addTaskFromInput(projectId, parsed)}
-			class="inline-edit flex-1"
-		/>
-	</div>
+	{@const showInput = addingTaskTo === projectId}
+	{#if showInput}
+		<div class="flex items-center gap-3 px-4 py-1 {indented ? 'pl-6' : ''}">
+			<div class="w-4 h-4 rounded-full border-2 border-dashed border-border flex-shrink-0 opacity-50"></div>
+			<SmartInput
+				value={val}
+				placeholder="new task..."
+				onSubmit={(parsed) => { addTaskFromInput(projectId, parsed); addingTaskTo = null; }}
+				onBlurSubmit={false}
+				class="inline-edit flex-1"
+			/>
+		</div>
+	{/if}
 {/snippet}
 
 {#if selectedProjectId}
