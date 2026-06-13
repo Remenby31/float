@@ -310,7 +310,7 @@
 </script>
 
 {#if !store.initialized}
-	<div class="flex items-center justify-center h-full">
+	<div class="flex items-center justify-center h-screen">
 		<div class="w-5 h-5 border-2 border-text-muted/40 border-t-text-muted rounded-full animate-spin"></div>
 	</div>
 {:else}
