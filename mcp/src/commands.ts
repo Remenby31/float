@@ -26,6 +26,10 @@ const COMMAND_ALIASES: Record<string, string> = {
   note: "note", notes: "note", desc: "note", description: "note",
   // move
   move: "move", mv: "move",
+  // weight
+  weight: "weight", priority: "weight", prio: "weight", w: "weight",
+  // label
+  label: "label", labels: "label", tag: "label", tags: "label",
   // rm
   rm: "rm", remove: "rm", delete: "rm", del: "rm", trash: "rm",
   // help
@@ -120,32 +124,99 @@ async function resolveTask(api: FloatAPI, query: string): Promise<{ task: Task; 
   return { task: result, project };
 }
 
+// ── Time parsing helper ────────────────────────────────────────────
+/** Extract a time component from the end of a date string. Returns [datePartOrNull, hours, minutes] or null. */
+function extractTime(input: string): { datePart: string | null; hours: number; minutes: number } | null {
+  const lower = input.toLowerCase().trim();
+
+  // French shortcuts: "ce soir" → 20:00, "ce midi" → 12:00, "ce matin" → 8:00
+  const frenchTimes: Record<string, [number, number]> = {
+    "ce soir": [20, 0], "soir": [20, 0], "tonight": [20, 0],
+    "ce midi": [12, 0], "midi": [12, 0], "noon": [12, 0],
+    "ce matin": [8, 0], "matin": [8, 0],
+  };
+
+  // Check if the whole input is a French time shortcut (implicitly today)
+  if (frenchTimes[lower]) {
+    const [h, m] = frenchTimes[lower];
+    return { datePart: null, hours: h, minutes: m };
+  }
+
+  // Check if input ends with a French time shortcut after a date part
+  for (const [key, [h, m]] of Object.entries(frenchTimes)) {
+    if (lower.endsWith(key)) {
+      const dp = lower.slice(0, -key.length).trim();
+      if (dp) return { datePart: dp, hours: h, minutes: m };
+    }
+  }
+
+  // "18h" "18h30" "8h" at the end
+  const hMatch = lower.match(/^(.*?)\s+(\d{1,2})h(\d{2})?$/);
+  if (hMatch) {
+    return { datePart: hMatch[1] || null, hours: parseInt(hMatch[2]), minutes: parseInt(hMatch[3] || "0") };
+  }
+  // Just "18h" or "18h30" alone (implies today)
+  const hAlone = lower.match(/^(\d{1,2})h(\d{2})?$/);
+  if (hAlone) {
+    return { datePart: null, hours: parseInt(hAlone[1]), minutes: parseInt(hAlone[2] || "0") };
+  }
+
+  // "HH:MM" at the end (e.g. "today 18:00", "2025-06-15 14:30")
+  const colonMatch = lower.match(/^(.*?)\s+(\d{1,2}):(\d{2})$/);
+  if (colonMatch) {
+    return { datePart: colonMatch[1] || null, hours: parseInt(colonMatch[2]), minutes: parseInt(colonMatch[3]) };
+  }
+  // Just "HH:MM" alone
+  const colonAlone = lower.match(/^(\d{1,2}):(\d{2})$/);
+  if (colonAlone) {
+    return { datePart: null, hours: parseInt(colonAlone[1]), minutes: parseInt(colonAlone[2]) };
+  }
+
+  return null;
+}
+
 // ── Date parsing ────────────────────────────────────────────────────
 const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 const DAY_SHORTS = ["sun","mon","tue","wed","thu","fri","sat"];
 
-function parseDate(input: string): string {
+function parseDateOnly(input: string): Date {
   const lower = input.toLowerCase().trim();
   const now = new Date();
 
-  if (lower === "today") return now.toISOString();
-  if (lower === "tomorrow") { now.setDate(now.getDate() + 1); return now.toISOString(); }
-  if (lower === "yesterday") { now.setDate(now.getDate() - 1); return now.toISOString(); }
+  if (lower === "today" || lower === "") {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  if (lower === "tomorrow") {
+    now.setDate(now.getDate() + 1);
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  if (lower === "yesterday") {
+    now.setDate(now.getDate() - 1);
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
 
   // "next week" → next Monday
   if (lower === "next week") {
     const daysUntilMon = (8 - now.getDay()) % 7 || 7;
     now.setDate(now.getDate() + daysUntilMon);
-    return now.toISOString();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
-  // "in N days/weeks"
-  const inMatch = lower.match(/^in\s+(\d+)\s+(day|days|week|weeks)$/);
+  // "in N days/weeks/hours/minutes"
+  const inMatch = lower.match(/^in\s+(\d+)\s+(day|days|week|weeks|hour|hours|h|minute|minutes|min)$/);
   if (inMatch) {
     const n = parseInt(inMatch[1]);
-    const unit = inMatch[2].startsWith("week") ? 7 : 1;
-    now.setDate(now.getDate() + n * unit);
-    return now.toISOString();
+    const unit = inMatch[2];
+    if (unit.startsWith("week")) {
+      now.setDate(now.getDate() + n * 7);
+    } else if (unit.startsWith("day")) {
+      now.setDate(now.getDate() + n);
+    } else if (unit === "h" || unit.startsWith("hour")) {
+      return new Date(now.getTime() + n * 60 * 60 * 1000);
+    } else {
+      return new Date(now.getTime() + n * 60 * 1000);
+    }
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
   // Day name: "monday", "tue" → next occurrence
@@ -153,12 +224,8 @@ function parseDate(input: string): string {
   if (dayIdx !== -1) {
     const diff = (dayIdx - now.getDay() + 7) % 7 || 7;
     now.setDate(now.getDate() + diff);
-    return now.toISOString();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
-
-  // Try standard date parsing
-  const parsed = new Date(input);
-  if (!isNaN(parsed.getTime())) return parsed.toISOString();
 
   // DD/MM or DD/MM/YYYY
   const slashMatch = input.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
@@ -166,10 +233,51 @@ function parseDate(input: string): string {
     const day = parseInt(slashMatch[1]);
     const month = parseInt(slashMatch[2]) - 1;
     const year = slashMatch[3] ? parseInt(slashMatch[3]) + (slashMatch[3].length === 2 ? 2000 : 0) : now.getFullYear();
-    return new Date(year, month, day).toISOString();
+    return new Date(year, month, day);
   }
 
-  throw new Error(`Cannot parse date "${input}". Try: today, tomorrow, monday, in 3 days, next week, 2025-06-15, 15/06`);
+  // Try standard date parsing (YYYY-MM-DD, etc.)
+  const parsed = new Date(input);
+  if (!isNaN(parsed.getTime())) return parsed;
+
+  throw new Error(`Cannot parse date "${input}". Try: today, tomorrow, monday, in 3 days, next week, 2025-06-15, 15/06, today 18h, ce soir`);
+}
+
+function parseDate(input: string): string {
+  // First check for time component
+  const timeInfo = extractTime(input);
+  if (timeInfo) {
+    const base = parseDateOnly(timeInfo.datePart || "today");
+    base.setHours(timeInfo.hours, timeInfo.minutes, 0, 0);
+    return base.toISOString();
+  }
+
+  // "in N hours/minutes" returns a datetime directly
+  const lower = input.toLowerCase().trim();
+  const inTimeMatch = lower.match(/^in\s+(\d+)\s+(hour|hours|h|minute|minutes|min)$/);
+  if (inTimeMatch) {
+    const n = parseInt(inTimeMatch[1]);
+    const unit = inTimeMatch[2];
+    const now = new Date();
+    if (unit === "h" || unit.startsWith("hour")) {
+      return new Date(now.getTime() + n * 60 * 60 * 1000).toISOString();
+    } else {
+      return new Date(now.getTime() + n * 60 * 1000).toISOString();
+    }
+  }
+
+  return parseDateOnly(input).toISOString();
+}
+
+function hasTime(iso: string | null): boolean {
+  if (!iso) return false;
+  const d = new Date(iso);
+  return d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0;
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getHours().toString().padStart(2, "0")}h${d.getMinutes().toString().padStart(2, "0")}`;
 }
 
 function relDate(iso: string | null): string {
@@ -179,17 +287,39 @@ function relDate(iso: string | null): string {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diff = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff === 0) return "today";
-  if (diff === 1) return "tomorrow";
-  if (diff === -1) return "yesterday";
-  if (diff > 0 && diff <= 7) return d.toLocaleDateString("en", { weekday: "short" });
-  return d.toLocaleDateString("en", { month: "short", day: "numeric" });
+  const timeSuffix = hasTime(iso) ? ` ${formatTime(iso)}` : "";
+  if (diff === 0) return `today${timeSuffix}`;
+  if (diff === 1) return `tomorrow${timeSuffix}`;
+  if (diff === -1) return `yesterday${timeSuffix}`;
+  if (diff > 0 && diff <= 7) return d.toLocaleDateString("en", { weekday: "short" }) + timeSuffix;
+  return d.toLocaleDateString("en", { month: "short", day: "numeric" }) + timeSuffix;
+}
+
+// ── Weight / Priority ──────────────────────────────────────────────
+const WEIGHT_ALIASES: Record<string, string> = {
+  low: "low", lo: "low", l: "low", basse: "low", faible: "low",
+  medium: "medium", med: "medium", m: "medium", moyenne: "medium", moyen: "medium",
+  high: "high", hi: "high", h: "high", haute: "high", haut: "high",
+  critical: "critical", crit: "critical", c: "critical", critique: "critical", urgent: "critical",
+};
+function parseWeight(input: string): string {
+  const w = WEIGHT_ALIASES[input.toLowerCase().trim()];
+  if (!w) throw new Error(`Unknown weight "${input}". Use: low, medium, high, critical`);
+  return w;
+}
+
+function weightIcon(w: string): string {
+  switch (w) {
+    case "critical": return "!!!";
+    case "high": return "!!";
+    case "low": return "~";
+    default: return "";
+  }
 }
 
 // ── Suggest closest command ─────────────────────────────────────────
 function suggestCommand(input: string): string {
   const n = normalize(input);
-  const canonicals = [...new Set(Object.values(COMMAND_ALIASES))];
   // Check all alias keys for closeness
   let bestKey = "";
   let bestDist = Infinity;
@@ -238,6 +368,8 @@ export async function executeCommand(api: FloatAPI, command: string): Promise<st
     case "done":     return cmdDone(api, args);
     case "undone":   return cmdUndone(api, args);
     case "due":      return cmdDue(api, args);
+    case "weight":   return cmdWeight(api, args);
+    case "label":    return cmdLabel(api, args);
     case "move":     return cmdMove(api, args);
     case "rm":       return cmdRm(api, args);
     case "note":     return cmdNote(api, args);
@@ -253,13 +385,17 @@ function helpText(): string {
   add <project> <title> Create task (aliases: create, new, +)
   done <id>             Check task (aliases: check, finish, complete)
   undone <id>           Uncheck (aliases: uncheck, undo, reopen)
-  due <id> <date>       Set due date (today, tomorrow, monday, in 3 days, next week, 15/06)
+  due <id> <date>       Set due date/time (today 18h, ce soir, tomorrow 14:00, in 2 hours)
+  weight <id> <level>   Set priority: low, medium, high, critical (aliases: priority, prio)
+  label <id> <action>   Labels: list, add <name>, rm <name> (aliases: tag, tags)
   note <id> [action]    Notes: show, append "text", replace "old" "new", set "text", clear
   move <id> <project>   Move task (alias: mv)
   rm <id>               Delete task (aliases: delete, del, remove)
 
 IDs: use first 6 chars of task ID, or task title for matching.
-Projects: fuzzy matched, accent-insensitive.`;
+Projects: fuzzy matched, accent-insensitive.
+Dates: today, tomorrow, monday, in 3 days, next week, 15/06, 2025-06-15
+Times: 18h, 18h30, 14:00, ce soir, midi, tonight, in 2 hours`;
 }
 
 // ── Commands ────────────────────────────────────────────────────────
@@ -311,7 +447,9 @@ async function cmdTasks(api: FloatAPI, projectName: string): Promise<string> {
   for (const t of pending) {
     const due = t.due_date ? ` ${relDate(t.due_date)}` : "";
     const note = t.description ? " 📎" : "";
-    lines.push(`☐ ${t.title}${note} [${shortId(t.id)}]${due}`);
+    const wi = weightIcon(t.weight);
+    const wp = wi ? ` ${wi}` : "";
+    lines.push(`☐ ${t.title}${note}${wp} [${shortId(t.id)}]${due}`);
   }
   if (done.length > 0) lines.push(`— ${done.length} done`);
   if (pending.length === 0 && done.length === 0) lines.push("  (empty)");
@@ -338,7 +476,9 @@ async function cmdPending(api: FloatAPI): Promise<string> {
     lines.push(`${proj?.title || "?"}:`);
     for (const t of tasks) {
       const due = t.due_date ? ` ${relDate(t.due_date)}` : "";
-      lines.push(`  ☐ ${t.title} [${shortId(t.id)}]${due}`);
+      const wi = weightIcon(t.weight);
+      const wp = wi ? ` ${wi}` : "";
+      lines.push(`  ☐ ${t.title}${wp} [${shortId(t.id)}]${due}`);
     }
   }
   lines.push(`\n${pending.length} total pending`);
@@ -407,7 +547,7 @@ async function cmdUndone(api: FloatAPI, query: string): Promise<string> {
 
 async function cmdDue(api: FloatAPI, args: string): Promise<string> {
   const parts = args.split(/\s+/);
-  if (parts.length < 2) return 'Usage: due <task-id> <date>\nDates: today, tomorrow, monday, in 3 days, next week, 15/06, 2025-06-15';
+  if (parts.length < 2) return 'Usage: due <task-id> <date/time>\nDates: today, tomorrow, monday, in 3 days, next week, 15/06\nTimes: today 18h, ce soir, tomorrow 14:00, in 2 hours';
   const id = parts[0];
   const dateStr = parts.slice(1).join(" ");
 
@@ -474,6 +614,74 @@ async function cmdNote(api: FloatAPI, args: string): Promise<string> {
   }
 
   return `Unknown note action "${action}". Use: append, replace, set, clear`;
+}
+
+async function cmdWeight(api: FloatAPI, args: string): Promise<string> {
+  const parts = args.split(/\s+/);
+  if (parts.length < 2) return 'Usage: weight <task-id> <level>\nLevels: low, medium, high, critical';
+  const id = parts[0];
+  const level = parts.slice(1).join(" ");
+
+  const { task, project } = await resolveTask(api, id);
+  const weight = parseWeight(level);
+  await api.updateTask(project.id, task.id, { weight });
+  return `${task.title} [${shortId(task.id)}] weight → ${weight}`;
+}
+
+async function cmdLabel(api: FloatAPI, args: string): Promise<string> {
+  const parts = args.match(/^(\S+)\s*([\s\S]*)/);
+  if (!parts) return 'Usage: label <task-id> [action]\nActions: (none)=list, add <name>, rm <name>';
+  const id = parts[1];
+  const rest = parts[2].trim();
+
+  const { task, project } = await resolveTask(api, id);
+  const projectLabels = await api.getLabels(project.id);
+
+  if (!rest || rest === "list") {
+    // Show labels on this task — we need to check which labels are attached
+    // The API doesn't return task labels directly, so list available project labels
+    if (projectLabels.length === 0) {
+      return `No labels in project "${project.title}". Use: label ${shortId(task.id)} add <name>`;
+    }
+    const labelList = projectLabels.map(l => `  ${l.title} (${l.color})`).join("\n");
+    return `Labels in "${project.title}":\n${labelList}\nUse: label ${shortId(task.id)} add <name> / rm <name>`;
+  }
+
+  const actionMatch = rest.match(/^(add|rm|remove|del|delete)\s+([\s\S]+)/i);
+  if (!actionMatch) {
+    // Treat as "add" shortcut
+    const name = rest;
+    let label = projectLabels.find(l => normalize(l.title) === normalize(name));
+    if (!label) {
+      label = await api.createLabel(project.id, name);
+    }
+    await api.attachLabel(project.id, task.id, label.id);
+    return `Tagged "${task.title}" [${shortId(task.id)}] with ${label.title}`;
+  }
+
+  const action = actionMatch[1].toLowerCase();
+  const labelName = actionMatch[2].trim();
+
+  if (action === "add") {
+    let label = projectLabels.find(l => normalize(l.title) === normalize(labelName));
+    if (!label) {
+      label = await api.createLabel(project.id, labelName);
+    }
+    await api.attachLabel(project.id, task.id, label.id);
+    return `Tagged "${task.title}" [${shortId(task.id)}] with ${label.title}`;
+  }
+
+  if (action === "rm" || action === "remove" || action === "del" || action === "delete") {
+    const label = projectLabels.find(l => normalize(l.title) === normalize(labelName));
+    if (!label) {
+      const available = projectLabels.map(l => l.title).join(", ");
+      return `Label "${labelName}" not found. Available: ${available || "none"}`;
+    }
+    await api.detachLabel(project.id, task.id, label.id);
+    return `Untagged "${task.title}" [${shortId(task.id)}] from ${label.title}`;
+  }
+
+  return `Unknown label action "${action}". Use: add, rm`;
 }
 
 async function cmdMove(api: FloatAPI, args: string): Promise<string> {

@@ -37,7 +37,9 @@ server.tool(
   add <project> <title> Create a task
   done <id>             Check task
   undone <id>           Uncheck task
-  due <id> <date>       Set due date
+  due <id> <date>       Set due date/time (today 18h, ce soir, in 2 hours)
+  weight <id> <level>   Set priority (low/medium/high/critical)
+  label <id> [action]   Labels: add <name>, rm <name>
   note <id> [action]    View/edit notes (append/replace/set/clear)
   move <id> <project>   Move task
   rm <id>               Delete task`,

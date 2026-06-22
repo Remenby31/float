@@ -28,7 +28,20 @@ interface Task {
   updated_at: string;
 }
 
-export type { Project, Task };
+interface Label {
+  id: string;
+  project_id: string;
+  title: string;
+  color: string;
+  created_at: string;
+}
+
+interface TaskLabel {
+  task_id: string;
+  label_id: string;
+}
+
+export type { Project, Task, Label, TaskLabel };
 
 export class FloatAPI {
   private baseUrl: string;
@@ -102,10 +115,12 @@ export class FloatAPI {
   async createTask(
     projectId: string,
     title: string,
-    dueDate?: string
+    opts?: { due_date?: string; weight?: string; description?: string }
   ): Promise<Task> {
-    const body: any = { title };
-    if (dueDate) body.due_date = dueDate;
+    const body: Record<string, unknown> = { title };
+    if (opts?.due_date) body.due_date = opts.due_date;
+    if (opts?.weight) body.weight = opts.weight;
+    if (opts?.description) body.description = opts.description;
     return this.request(`/projects/${projectId}/tasks`, {
       method: "POST",
       body: JSON.stringify(body),
@@ -118,6 +133,7 @@ export class FloatAPI {
     data: Partial<{
       title: string;
       description: string | null;
+      weight: string;
       is_done: boolean;
       due_date: string | null;
       new_project_id: string;
@@ -131,6 +147,38 @@ export class FloatAPI {
 
   async deleteTask(projectId: string, taskId: string): Promise<void> {
     await this.request(`/projects/${projectId}/tasks/${taskId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ── Labels ───────────────────────────────────────────────────────
+  async getLabels(projectId: string): Promise<Label[]> {
+    return this.request(`/projects/${projectId}/labels`);
+  }
+
+  async createLabel(projectId: string, title: string, color?: string): Promise<Label> {
+    const body: Record<string, string> = { title };
+    if (color) body.color = color;
+    return this.request(`/projects/${projectId}/labels`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteLabel(projectId: string, labelId: string): Promise<void> {
+    await this.request(`/projects/${projectId}/labels/${labelId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async attachLabel(projectId: string, taskId: string, labelId: string): Promise<void> {
+    await this.request(`/projects/${projectId}/tasks/${taskId}/labels/${labelId}`, {
+      method: "PUT",
+    });
+  }
+
+  async detachLabel(projectId: string, taskId: string, labelId: string): Promise<void> {
+    await this.request(`/projects/${projectId}/tasks/${taskId}/labels/${labelId}`, {
       method: "DELETE",
     });
   }
