@@ -32,6 +32,14 @@ const COMMAND_ALIASES: Record<string, string> = {
   label: "label", labels: "label", tag: "label", tags: "label",
   // rm
   rm: "rm", remove: "rm", delete: "rm", del: "rm", trash: "rm",
+  // rename
+  rename: "rename", ren: "rename", retitle: "rename",
+  // search
+  search: "search", find: "search", grep: "search", chercher: "search",
+  // recur
+  recur: "recur", recurring: "recur", repeat: "recur", recurrence: "recur",
+  // subtask
+  subtask: "subtask", sub: "subtask", child: "subtask",
   // help
   help: "help", "?": "help", h: "help",
 };
@@ -363,7 +371,7 @@ export async function executeCommand(api: FloatAPI, command: string): Promise<st
     case "help":     return helpText();
     case "projects": return cmdProjects(api);
     case "tasks":    return cmdTasks(api, args);
-    case "pending":  return cmdPending(api);
+    case "pending":  return cmdPending(api, args);
     case "add":      return cmdAdd(api, args);
     case "done":     return cmdDone(api, args);
     case "undone":   return cmdUndone(api, args);
@@ -373,29 +381,36 @@ export async function executeCommand(api: FloatAPI, command: string): Promise<st
     case "move":     return cmdMove(api, args);
     case "rm":       return cmdRm(api, args);
     case "note":     return cmdNote(api, args);
+    case "rename":   return cmdRename(api, args);
+    case "search":   return cmdSearch(api, args);
+    case "recur":    return cmdRecur(api, args);
+    case "subtask":  return cmdSubtask(api, args);
     default:         return helpText();
   }
 }
 
 function helpText(): string {
   return `Commands:
-  projects              List projects (aliases: proj, ls, list)
-  tasks <project>       Tasks for a project (aliases: taches, tâches)
-  pending               All pending tasks (aliases: todo, open)
-  add <project> <title> Create task (aliases: create, new, +)
-  done <id>             Check task (aliases: check, finish, complete)
-  undone <id>           Uncheck (aliases: uncheck, undo, reopen)
-  due <id> <date>       Set due date/time (today 18h, ce soir, tomorrow 14:00, in 2 hours)
-  weight <id> <level>   Set priority: low, medium, high, critical (aliases: priority, prio)
-  label <id> <action>   Labels: list, add <name>, rm <name> (aliases: tag, tags)
-  note <id> [action]    Notes: show, append "text", replace "old" "new", set "text", clear
-  move <id> <project>   Move task (alias: mv)
-  rm <id>               Delete task (aliases: delete, del, remove)
-
-IDs: use first 6 chars of task ID, or task title for matching.
-Projects: fuzzy matched, accent-insensitive.
-Dates: today, tomorrow, monday, in 3 days, next week, 15/06, 2025-06-15
-Times: 18h, 18h30, 14:00, ce soir, midi, tonight, in 2 hours`;
+  projects              List projects grouped by family
+  tasks <project>       Tasks for a project (fuzzy match)
+  pending               All pending tasks
+  pending today         Due today
+  pending tomorrow      Due tomorrow
+  pending overdue       Overdue tasks
+  pending <project>     Pending in a project
+  add <project> <title> Create a task
+  done <id>             Check task
+  undone <id>           Uncheck task
+  due <id> <date>       Set due date/time (today 18h, ce soir, in 2 hours)
+  weight <id> <level>   Set priority (low/medium/high/critical)
+  label <id> [action]   Labels: add <name>, rm <name>
+  note <id> [action]    View/edit notes (append/replace/set/clear)
+  move <id> <project>   Move task
+  rename <id> <title>   Rename a task
+  search <keyword>      Search tasks by title or notes
+  recur <id> <pattern>  Set recurrence (daily/weekly/monthly), show, or clear
+  subtask <parent> <t>  Create a subtask under a parent task
+  rm <id>               Delete task`;
 }
 
 // ── Commands ────────────────────────────────────────────────────────
@@ -445,25 +460,88 @@ async function cmdTasks(api: FloatAPI, projectName: string): Promise<string> {
 
   const lines: string[] = [`${project.title}:`];
   for (const t of pending) {
-    const due = t.due_date ? ` ${relDate(t.due_date)}` : "";
-    const note = t.description ? " 📎" : "";
-    const wi = weightIcon(t.weight);
-    const wp = wi ? ` ${wi}` : "";
-    lines.push(`☐ ${t.title}${note}${wp} [${shortId(t.id)}]${due}`);
+    lines.push(formatTask(t));
   }
   if (done.length > 0) lines.push(`— ${done.length} done`);
   if (pending.length === 0 && done.length === 0) lines.push("  (empty)");
   return lines.join("\n");
 }
 
-async function cmdPending(api: FloatAPI): Promise<string> {
+function isOverdue(t: Task): boolean {
+  if (!t.due_date || t.is_done) return false;
+  const due = new Date(t.due_date);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return due < today;
+}
+
+function isDueOnDate(t: Task, target: Date): boolean {
+  if (!t.due_date) return false;
+  const d = new Date(t.due_date);
+  return d.getFullYear() === target.getFullYear()
+    && d.getMonth() === target.getMonth()
+    && d.getDate() === target.getDate();
+}
+
+function formatTask(t: Task, projName?: string): string {
+  const overdue = isOverdue(t) ? "⚠️ " : "";
+  const due = t.due_date ? ` ${relDate(t.due_date)}` : "";
+  const wi = weightIcon(t.weight);
+  const wp = wi ? ` ${wi}` : "";
+  const note = t.description ? " 📎" : "";
+  const sub = t.title.startsWith("↳ ") ? "  " : "";
+  const prefix = projName ? `${sub}  ` : sub;
+  return `${prefix}${overdue}☐ ${t.title}${note}${wp} [${shortId(t.id)}]${due}`;
+}
+
+async function cmdPending(api: FloatAPI, filter?: string): Promise<string> {
   const projects = await api.getProjects();
   const allTasks = await api.getAllTasks();
-  const pending = allTasks.filter(t => !t.is_done);
+  let pending = allTasks.filter(t => !t.is_done);
 
-  if (pending.length === 0) return "No pending tasks!";
+  const f = filter?.trim().toLowerCase();
+  let heading = "";
+
+  if (f === "today" || f === "aujourd'hui" || f === "aujourdhui") {
+    const today = new Date();
+    const target = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    pending = pending.filter(t => isDueOnDate(t, target));
+    heading = "Due today";
+  } else if (f === "tomorrow" || f === "demain") {
+    const tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    const target = new Date(tom.getFullYear(), tom.getMonth(), tom.getDate());
+    pending = pending.filter(t => isDueOnDate(t, target));
+    heading = "Due tomorrow";
+  } else if (f === "overdue" || f === "retard" || f === "late") {
+    pending = pending.filter(isOverdue);
+    heading = "Overdue";
+  } else if (f) {
+    const proj = findProject(projects, f);
+    if (proj) {
+      pending = pending.filter(t => t.project_id === proj.id);
+      heading = proj.title;
+    } else {
+      return projectSuggestions(projects, f);
+    }
+  }
+
+  if (pending.length === 0) return heading ? `No ${heading.toLowerCase()} tasks.` : "No pending tasks!";
+
+  // Sort: overdue first, then by due date
+  pending.sort((a, b) => {
+    const ao = isOverdue(a) ? 0 : 1;
+    const bo = isOverdue(b) ? 0 : 1;
+    if (ao !== bo) return ao - bo;
+    if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    if (a.due_date) return -1;
+    if (b.due_date) return 1;
+    return 0;
+  });
 
   const lines: string[] = [];
+  if (heading) lines.push(`${heading}:`);
+
   const byProject = new Map<string, Task[]>();
   for (const t of pending) {
     const arr = byProject.get(t.project_id) || [];
@@ -475,13 +553,10 @@ async function cmdPending(api: FloatAPI): Promise<string> {
     const proj = projects.find(p => p.id === pid);
     lines.push(`${proj?.title || "?"}:`);
     for (const t of tasks) {
-      const due = t.due_date ? ` ${relDate(t.due_date)}` : "";
-      const wi = weightIcon(t.weight);
-      const wp = wi ? ` ${wi}` : "";
-      lines.push(`  ☐ ${t.title}${wp} [${shortId(t.id)}]${due}`);
+      lines.push(formatTask(t, proj?.title));
     }
   }
-  lines.push(`\n${pending.length} total pending`);
+  lines.push(`\n${pending.length} total`);
   return lines.join("\n");
 }
 
@@ -529,11 +604,41 @@ async function cmdAdd(api: FloatAPI, args: string): Promise<string> {
   return `Created: ${title.trim()} [${shortId(task.id)}] in ${bestProject.title}`;
 }
 
+const RECUR_RE = /\[recur:(daily|weekly|monthly)\]/;
+
+function getRecurPattern(task: Task): string | null {
+  if (!task.description) return null;
+  const m = task.description.match(RECUR_RE);
+  return m ? m[1] : null;
+}
+
+function nextRecurDate(current: string | null, pattern: string): string {
+  const base = current ? new Date(current) : new Date();
+  switch (pattern) {
+    case "daily":   base.setDate(base.getDate() + 1); break;
+    case "weekly":  base.setDate(base.getDate() + 7); break;
+    case "monthly": base.setMonth(base.getMonth() + 1); break;
+  }
+  return base.toISOString();
+}
+
 async function cmdDone(api: FloatAPI, query: string): Promise<string> {
   if (!query) return 'Usage: done <task-id or title>\nExample: done a3f2c1';
   const { task, project } = await resolveTask(api, query);
   if (task.is_done) return `Already done: ✓ ${task.title} [${shortId(task.id)}]`;
   await api.updateTask(project.id, task.id, { is_done: true });
+
+  const pattern = getRecurPattern(task);
+  if (pattern) {
+    const nextDue = nextRecurDate(task.due_date, pattern);
+    const newTask = await api.createTask(project.id, task.title, {
+      due_date: nextDue,
+      weight: task.weight,
+      description: task.description || undefined,
+    });
+    return `✓ ${task.title} [${shortId(task.id)}]\n↻ Recreated (${pattern}) → due ${relDate(nextDue)} [${shortId(newTask.id)}]`;
+  }
+
   return `✓ ${task.title} [${shortId(task.id)}]`;
 }
 
@@ -704,4 +809,80 @@ async function cmdRm(api: FloatAPI, query: string): Promise<string> {
   const { task, project } = await resolveTask(api, query);
   await api.deleteTask(project.id, task.id);
   return `Deleted: ${task.title} [${shortId(task.id)}] from ${project.title}`;
+}
+
+async function cmdRename(api: FloatAPI, args: string): Promise<string> {
+  const parts = args.match(/^(\S+)\s+([\s\S]+)/);
+  if (!parts) return 'Usage: rename <task-id> <new title>';
+  const { task, project } = await resolveTask(api, parts[1]);
+  const newTitle = parts[2].trim();
+  await api.updateTask(project.id, task.id, { title: newTitle });
+  return `Renamed: "${task.title}" → "${newTitle}" [${shortId(task.id)}]`;
+}
+
+async function cmdSearch(api: FloatAPI, query: string): Promise<string> {
+  if (!query.trim()) return 'Usage: search <keyword>';
+  const projects = await api.getProjects();
+  const allTasks = await api.getAllTasks();
+  const q = normalize(query.trim());
+  const matches = allTasks.filter(t =>
+    normalize(t.title).includes(q) ||
+    (t.description && normalize(t.description).includes(q))
+  );
+
+  if (matches.length === 0) return `No tasks matching "${query}".`;
+
+  const lines: string[] = [`${matches.length} result${matches.length > 1 ? "s" : ""} for "${query}":`];
+  for (const t of matches) {
+    const proj = projects.find(p => p.id === t.project_id);
+    const status = t.is_done ? "✓" : "☐";
+    const due = t.due_date ? ` ${relDate(t.due_date)}` : "";
+    const inProj = proj ? ` (${proj.title})` : "";
+    lines.push(`  ${status} ${t.title} [${shortId(t.id)}]${due}${inProj}`);
+  }
+  return lines.join("\n");
+}
+
+async function cmdRecur(api: FloatAPI, args: string): Promise<string> {
+  const parts = args.match(/^(\S+)\s*([\s\S]*)/);
+  if (!parts) return 'Usage: recur <task-id> <daily|weekly|monthly|show|clear>';
+  const { task, project } = await resolveTask(api, parts[1]);
+  const action = parts[2].trim().toLowerCase();
+
+  const current = getRecurPattern(task);
+
+  if (!action || action === "show") {
+    return current
+      ? `"${task.title}" [${shortId(task.id)}] recurs ${current}`
+      : `"${task.title}" [${shortId(task.id)}] has no recurrence. Use: recur ${shortId(task.id)} daily|weekly|monthly`;
+  }
+
+  if (action === "clear" || action === "none" || action === "off") {
+    if (!current) return `"${task.title}" has no recurrence to clear.`;
+    const cleaned = (task.description || "").replace(RECUR_RE, "").trim();
+    await api.updateTask(project.id, task.id, { description: cleaned || null });
+    return `Cleared recurrence on "${task.title}" [${shortId(task.id)}]`;
+  }
+
+  const validPatterns = ["daily", "weekly", "monthly"];
+  if (!validPatterns.includes(action)) {
+    return `Unknown recurrence "${action}". Use: daily, weekly, monthly, show, clear`;
+  }
+
+  const desc = task.description || "";
+  const newDesc = current
+    ? desc.replace(RECUR_RE, `[recur:${action}]`)
+    : desc ? `${desc}\n[recur:${action}]` : `[recur:${action}]`;
+  await api.updateTask(project.id, task.id, { description: newDesc });
+  return `"${task.title}" [${shortId(task.id)}] now recurs ${action}`;
+}
+
+async function cmdSubtask(api: FloatAPI, args: string): Promise<string> {
+  const parts = args.match(/^(\S+)\s+([\s\S]+)/);
+  if (!parts) return 'Usage: subtask <parent-id> <title>';
+  const { task: parent, project } = await resolveTask(api, parts[1]);
+  const title = `↳ ${parts[2].trim()}`;
+  const desc = `[parent:${shortId(parent.id)}]`;
+  const sub = await api.createTask(project.id, title, { description: desc });
+  return `Created subtask: ${title} [${shortId(sub.id)}] under "${parent.title}"`;
 }

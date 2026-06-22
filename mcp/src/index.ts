@@ -34,6 +34,10 @@ server.tool(
   projects              List projects grouped by family
   tasks <project>       Tasks for a project (fuzzy match)
   pending               All pending tasks
+  pending today         Due today
+  pending tomorrow      Due tomorrow
+  pending overdue       Overdue tasks
+  pending <project>     Pending in a project
   add <project> <title> Create a task
   done <id>             Check task
   undone <id>           Uncheck task
@@ -42,6 +46,10 @@ server.tool(
   label <id> [action]   Labels: add <name>, rm <name>
   note <id> [action]    View/edit notes (append/replace/set/clear)
   move <id> <project>   Move task
+  rename <id> <title>   Rename a task
+  search <keyword>      Search tasks by title or notes
+  recur <id> <pattern>  Set recurrence (daily/weekly/monthly), show, or clear
+  subtask <parent> <t>  Create a subtask under a parent task
   rm <id>               Delete task`,
   { command: z.string().describe("Command to execute (e.g. 'projects', 'add Général Fix bug')") },
   async ({ command }) => {
