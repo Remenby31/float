@@ -4,6 +4,7 @@
 	import { api, type Project, type Task } from '$lib/api';
 	import { getDataStore } from '$lib/stores/data.svelte';
 	import { parseInput, getSuggestions, type Suggestion } from '$lib/smart-input';
+	import { tick } from 'svelte';
 
 	let {
 		open = $bindable(false),
@@ -21,11 +22,13 @@
 	let atSuggestions = $state<Suggestion[]>([]);
 	let atSelectedIdx = $state(0);
 	let showAtSuggestions = $state(false);
+	let atSource = $state<'search' | 'create'>('search');
 
-	function onQueryInput() {
-		const words = query.split(/\s/);
+	function updateAtSuggestions(text: string, source: 'search' | 'create') {
+		const words = text.split(/\s/);
 		const last = words[words.length - 1];
 		if (last.startsWith('@') && last.length > 1) {
+			atSource = source;
 			atSuggestions = getSuggestions(last.slice(1), []);
 			atSelectedIdx = 0;
 			showAtSuggestions = atSuggestions.length > 0;
@@ -34,18 +37,33 @@
 		}
 	}
 
+	function onQueryInput() {
+		updateAtSuggestions(query, 'search');
+	}
+
+	function onCreateTaskInput() {
+		updateAtSuggestions(creatingTask, 'create');
+	}
+
 	function applyAtSuggestion(s: Suggestion) {
-		const words = query.split(/\s/);
+		const text = atSource === 'create' ? creatingTask : query;
+		const words = text.split(/\s/);
 		words[words.length - 1] = `@${s.value}`;
-		query = words.join(' ') + ' ';
+		if (atSource === 'create') {
+			creatingTask = words.join(' ') + ' ';
+		} else {
+			query = words.join(' ') + ' ';
+		}
 		showAtSuggestions = false;
-		inputEl?.focus();
+		setTimeout(() => (atSource === 'create' ? createTaskInputEl : inputEl)?.focus(), 0);
 	}
 
 	// Step 2: picking a project for new task
 	let creatingTask = $state('');
 	let projectQuery = $state('');
 	let projectIdx = $state(0);
+	let selectedProjectId = $state<string | null>(null);
+	let createTaskInputEl = $state<HTMLInputElement>();
 	let projectInputEl = $state<HTMLInputElement>();
 
 	$effect(() => {
@@ -53,12 +71,13 @@
 			query = '';
 			creatingTask = '';
 			projectQuery = '';
+			selectedProjectId = null;
 			selectedIdx = 0;
 			projectIdx = 0;
 			showAtSuggestions = false;
 			setTimeout(() => inputEl?.focus(), 50);
 		}
-			});
+	});
 
 	function matches(text: string, q: string): boolean {
 		const lower = text.toLowerCase();
@@ -115,6 +134,10 @@
 			.filter(p => !q || matches(p.title, q));
 	});
 
+	let selectedProject = $derived(
+		selectedProjectId ? store.projects.find(p => p.id === selectedProjectId) : null
+	);
+
 	function activate(r: Result) {
 		if (r.type === 'create') {
 			startCreate();
@@ -130,13 +153,37 @@
 		if (!query.trim()) return;
 		creatingTask = query.trim();
 		projectQuery = '';
+		selectedProjectId = null;
 		projectIdx = 0;
 		setTimeout(() => projectInputEl?.focus(), 50);
 	}
 
-	async function createInProject(projectId: string) {
+	function onProjectInput() {
+		projectIdx = 0;
+	}
+
+	async function selectProject(projectId: string) {
+		selectedProjectId = projectId;
+		projectQuery = '';
+		await tick();
+		const nextProjectIdx = leafProjects.findIndex(p => p.id === projectId);
+		projectIdx = Math.max(nextProjectIdx, 0);
+		createTaskInputEl?.focus();
+	}
+
+	async function submitCreatedTask() {
+		const title = creatingTask.trim();
+		if (!title) {
+			createTaskInputEl?.focus();
+			return;
+		}
+		if (!selectedProjectId) {
+			projectInputEl?.focus();
+			return;
+		}
 		const parsed = parseInput(creatingTask);
-		await store.addTask(projectId, { title: parsed.title || creatingTask, due_date: parsed.due_date });
+		const projectId = selectedProjectId;
+		await store.addTask(projectId, { title: parsed.title || title, due_date: parsed.due_date });
 		open = false;
 		if (page.url.pathname !== '/app') goto('/app');
 		setTimeout(() => document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
@@ -156,16 +203,42 @@
 			if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); applyAtSuggestion(atSuggestions[atSelectedIdx]); return; }
 		}
 		if (creatingTask) {
-			// Step 2: project selection
-			if (e.key === 'ArrowDown') { e.preventDefault(); projectIdx = Math.min(projectIdx + 1, leafProjects.length - 1); }
-			if (e.key === 'ArrowUp') { e.preventDefault(); projectIdx = Math.max(projectIdx - 1, 0); }
-			if (e.key === 'Enter' && leafProjects[projectIdx]) { e.preventDefault(); createInProject(leafProjects[projectIdx].id); }
+			const target = e.target;
+			const isTaskInput = target === createTaskInputEl;
+			const isProjectInput = target === projectInputEl;
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				projectIdx = Math.min(projectIdx + 1, Math.max(leafProjects.length - 1, 0));
+				if (!isProjectInput) projectInputEl?.focus();
+				return;
+			}
+			if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				projectIdx = Math.max(projectIdx - 1, 0);
+				if (!isProjectInput) projectInputEl?.focus();
+				return;
+			}
+			if (isProjectInput && (e.key === 'Tab' || e.key === 'Enter') && leafProjects[projectIdx]) {
+				e.preventDefault();
+				selectProject(leafProjects[projectIdx].id);
+				return;
+			}
+			if (isTaskInput && e.key === 'Enter') {
+				e.preventDefault();
+				submitCreatedTask();
+				return;
+			}
+			if (isTaskInput && e.key === 'Tab' && !e.shiftKey && !selectedProjectId) {
+				e.preventDefault();
+				projectInputEl?.focus();
+				return;
+			}
 			return;
 		}
 		// Step 1: search
 		if (e.key === 'ArrowDown') { e.preventDefault(); selectedIdx = Math.min(selectedIdx + 1, results.length - 1); }
 		if (e.key === 'ArrowUp') { e.preventDefault(); selectedIdx = Math.max(selectedIdx - 1, 0); }
-		if (e.key === 'Enter') {
+		if (e.key === 'Enter' || e.key === 'Tab') {
 			e.preventDefault();
 			if (results[selectedIdx]) activate(results[selectedIdx]);
 			else if (query.trim()) startCreate();
@@ -191,49 +264,98 @@
 	<div class="fixed inset-0 z-[70] flex items-start justify-center pt-[15vh] px-4 pointer-events-none" onkeydown={onKeydown}>
 		<div class="bg-bg border border-border rounded-2xl shadow-2xl w-full max-w-xl pointer-events-auto animate-modalIn overflow-hidden">
 
-			{#if creatingTask}
-				{@const parsedPreview = parseInput(creatingTask)}
-				<!-- Step 2: Pick project -->
-				<div class="px-4 py-3 border-b border-border">
-					<div class="flex items-center gap-2 mb-2">
-						<span class="text-[10px] uppercase tracking-wider text-text-muted">new task</span>
-						<span class="text-sm text-text">{parsedPreview.title || creatingTask}</span>
-						{#if parsedPreview.due_date}
-							{@const d = new Date(parsedPreview.due_date)}
-							<span class="text-[10px] text-text-muted bg-surface border border-border rounded-md px-1.5 py-0.5">
-								{d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}{d.getHours() || d.getMinutes() ? ` ${d.getHours()}h${d.getMinutes().toString().padStart(2, '0')}` : ''}
-							</span>
-						{/if}
-					</div>
-					<div class="flex items-center gap-3">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-text-muted flex-shrink-0">
-							<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-						</svg>
-						<input
-							bind:this={projectInputEl}
-							bind:value={projectQuery}
-							placeholder="which project? type to filter..."
-							class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/60 focus:outline-none"
-						/>
-						<kbd class="hidden md:inline text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
-					</div>
-				</div>
-
-				<div class="max-h-[40vh] overflow-y-auto">
-					{#each leafProjects as p, i}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div class="px-3 py-0.5" onclick={() => createInProject(p.id)}>
-							<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors {i === projectIdx ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}">
-								<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{p.color || '#525252'}"></span>
-								<span class="text-sm truncate">{p.title}</span>
-								{#if parentName(p)}
-									<span class="text-[10px] text-text-muted ml-auto">{parentName(p)}</span>
-								{/if}
-							</div>
+				{#if creatingTask}
+					{@const parsedPreview = parseInput(creatingTask)}
+					<!-- Step 2: Pick project -->
+					<div class="px-4 py-3 border-b border-border">
+						<div class="flex items-center justify-between gap-3 mb-2">
+							<span class="text-[10px] uppercase tracking-wider text-text-muted">new task</span>
+							{#if selectedProject}
+								<span class="min-w-0 inline-flex items-center gap-1.5 text-[10px] text-text-muted bg-surface border border-border rounded-md px-1.5 py-0.5">
+									<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{selectedProject.color || '#525252'}"></span>
+									<span class="truncate max-w-[160px]">{selectedProject.title}</span>
+								</span>
+							{/if}
 						</div>
-					{/each}
-					{#if leafProjects.length === 0}
+						<div class="flex items-center gap-3 mb-3">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-text-muted flex-shrink-0">
+								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+							</svg>
+							<input
+								bind:this={createTaskInputEl}
+								bind:value={creatingTask}
+								oninput={onCreateTaskInput}
+								placeholder="what needs doing?"
+								class="flex-1 min-w-0 bg-transparent text-sm text-text placeholder:text-text-muted/60 focus:outline-none"
+							/>
+							{#if parsedPreview.due_date}
+								{@const d = new Date(parsedPreview.due_date)}
+								<span class="text-[10px] text-text-muted bg-surface border border-border rounded-md px-1.5 py-0.5 flex-shrink-0">
+									{d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}{d.getHours() || d.getMinutes() ? ` ${d.getHours()}h${d.getMinutes().toString().padStart(2, '0')}` : ''}
+								</span>
+							{/if}
+							<button
+								type="button"
+								onclick={submitCreatedTask}
+								disabled={!selectedProjectId || !creatingTask.trim()}
+								class="hidden sm:inline-flex text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-default enabled:bg-text enabled:text-bg enabled:border-text disabled:bg-surface disabled:text-text-muted disabled:border-border"
+							>
+								Create
+							</button>
+						</div>
+						{#if showAtSuggestions && atSource === 'create'}
+							<div class="mb-3 -mx-1 overflow-hidden rounded-xl border border-border bg-elevated">
+								{#each atSuggestions as s, i}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="px-3 py-2 text-sm flex items-center gap-3 cursor-pointer transition-colors {i === atSelectedIdx ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}"
+										onmousedown={() => applyAtSuggestion(s)}
+									>
+										<span class="text-[9px] uppercase tracking-wider text-text-muted w-8 text-right font-medium">{s.type === 'date' ? 'date' : s.type === 'time' ? 'time' : 'proj'}</span>
+										<span class="flex-1">{s.label}</span>
+										{#if s.description}
+											<span class="text-[11px] text-text-muted">{s.description}</span>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						{/if}
+						<div class="flex items-center gap-3">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-text-muted flex-shrink-0">
+								<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+							</svg>
+							<input
+								bind:this={projectInputEl}
+								bind:value={projectQuery}
+								oninput={onProjectInput}
+								placeholder="which project? type to filter..."
+								class="flex-1 bg-transparent text-sm text-text placeholder:text-text-muted/60 focus:outline-none"
+							/>
+							<kbd class="hidden md:inline text-[10px] text-text-muted bg-surface border border-border rounded px-1.5 py-0.5 font-mono">esc</kbd>
+						</div>
+					</div>
+
+					<div class="max-h-[40vh] overflow-y-auto">
+						{#each leafProjects as p, i}
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="px-3 py-0.5" onclick={() => selectProject(p.id)}>
+								<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors {i === projectIdx ? 'bg-surface text-text' : selectedProjectId === p.id ? 'text-text bg-surface/60' : 'text-text-secondary hover:bg-surface/50'}">
+									<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{p.color || '#525252'}"></span>
+									<span class="text-sm truncate">{p.title}</span>
+									<div class="ml-auto flex items-center gap-2 min-w-0">
+										{#if parentName(p)}
+											<span class="text-[10px] text-text-muted truncate max-w-[120px]">{parentName(p)}</span>
+										{/if}
+										{#if selectedProjectId === p.id}
+											<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="text-text flex-shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+										{/if}
+									</div>
+								</div>
+							</div>
+						{/each}
+						{#if leafProjects.length === 0}
 						<div class="px-4 py-6 text-center">
 							<p class="text-sm text-text-muted">no match</p>
 						</div>
@@ -241,11 +363,12 @@
 					<div class="h-1"></div>
 				</div>
 
-				<div class="hidden md:flex px-4 py-2 border-t border-border items-center gap-4 text-[10px] text-text-muted">
-					<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↑↓</kbd> select</span>
-					<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↵</kbd> create</span>
-					<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">esc</kbd> back</span>
-				</div>
+					<div class="hidden md:flex px-4 py-2 border-t border-border items-center gap-4 text-[10px] text-text-muted">
+						<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↑↓</kbd> select</span>
+						<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">tab</kbd>/<kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↵</kbd> choose project</span>
+						<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">↵</kbd> create from task</span>
+						<span><kbd class="font-mono bg-surface border border-border rounded px-1 py-0.5">esc</kbd> back</span>
+					</div>
 
 			{:else}
 				<!-- Step 1: Search -->
