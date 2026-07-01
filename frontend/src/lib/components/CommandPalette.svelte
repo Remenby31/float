@@ -155,14 +155,15 @@
 		setTimeout(() => document.getElementById(`project-${pid}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
 	}
 
-	function startCreate() {
+	async function startCreate() {
 		if (!query.trim()) return;
 		creatingTask = query.trim();
 		projectQuery = '';
 		selectedProjectId = null;
 		projectPickerOpen = true;
 		projectIdx = 0;
-		setTimeout(() => projectInputEl?.focus(), 50);
+		await tick();
+		projectInputEl?.focus();
 	}
 
 	function onProjectInput() {
@@ -180,9 +181,10 @@
 		createTaskInputEl?.focus();
 	}
 
-	function openProjectPicker() {
+	async function openProjectPicker() {
 		projectPickerOpen = true;
-		setTimeout(() => projectInputEl?.focus(), 0);
+		await tick();
+		projectInputEl?.focus();
 	}
 
 	async function submitCreatedTask() {
