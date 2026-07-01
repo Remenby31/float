@@ -249,7 +249,7 @@
 				if (!isProjectInput) projectInputEl?.focus();
 				return;
 			}
-			if (isProjectInput && (e.key === 'Tab' || e.key === 'Enter') && visibleLeafProjects[projectIdx]) {
+			if (projectPickerOpen && (e.key === 'Tab' || e.key === 'Enter') && visibleLeafProjects[projectIdx]) {
 				e.preventDefault();
 				selectProject(visibleLeafProjects[projectIdx].id);
 				return;
