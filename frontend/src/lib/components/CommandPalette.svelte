@@ -45,6 +45,14 @@
 		updateAtSuggestions(creatingTask, 'create');
 	}
 
+	function focusSoon(getEl: () => HTMLElement | undefined) {
+		const focus = () => getEl()?.focus();
+		focus();
+		requestAnimationFrame(focus);
+		setTimeout(focus, 0);
+		setTimeout(focus, 50);
+	}
+
 	function applyAtSuggestion(s: Suggestion) {
 		const text = atSource === 'create' ? creatingTask : query;
 		const words = text.split(/\s/);
@@ -163,7 +171,7 @@
 		projectPickerOpen = true;
 		projectIdx = 0;
 		await tick();
-		projectInputEl?.focus();
+		focusSoon(() => projectInputEl);
 	}
 
 	function onProjectInput() {
@@ -178,13 +186,13 @@
 		await tick();
 		const nextProjectIdx = leafProjects.findIndex(p => p.id === projectId);
 		projectIdx = Math.max(nextProjectIdx, 0);
-		createTaskInputEl?.focus();
+		focusSoon(() => createTaskInputEl);
 	}
 
 	async function openProjectPicker() {
 		projectPickerOpen = true;
 		await tick();
-		projectInputEl?.focus();
+		focusSoon(() => projectInputEl);
 	}
 
 	async function submitCreatedTask() {
