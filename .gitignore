@@ -6,7 +6,9 @@ node_modules/
 frontend/build/
 frontend/.svelte-kit/
 *.log
-.claude/
+.claude/*
+!.claude/skills/
+.codex/
 .playwright-cli/
 .secrets
 .mcp.json
