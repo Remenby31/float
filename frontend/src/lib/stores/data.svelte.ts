@@ -13,6 +13,8 @@ function createDataStore() {
 	let allTasks = $state<Task[]>([]);
 	let initialized = $state(false);
 	let recentlyAdded = $state<Set<string>>(new Set());
+	// Tasks checked since page load — they stay visible until the next reload.
+	let doneThisSession = $state<Set<string>>(new Set());
 	let undoStack: UndoAction[] = [];
 	let redoStack: UndoAction[] = [];
 
@@ -142,21 +144,29 @@ function createDataStore() {
 		}
 	}
 
+	function trackDone(id: string, isDone: boolean | undefined) {
+		if (isDone === undefined) return;
+		const next = new Set(doneThisSession);
+		if (isDone) next.add(id); else next.delete(id);
+		doneThisSession = next;
+	}
+
 	async function updateTask(projectId: string, id: string, data: Partial<Pick<Task, 'title' | 'description' | 'is_done' | 'due_date' | 'position'>>) {
 		const prev = allTasks.find(t => t.id === id);
 		if (prev) allTasks = allTasks.map(t => t.id === id ? { ...t, ...data } : t);
+		trackDone(id, data.is_done);
 		try {
 			const updated = await api.updateTask(projectId, id, data);
 			allTasks = allTasks.map(t => t.id === id ? updated : t);
 			if (prev && data.is_done !== undefined) {
 				pushUndo(
-					async () => { const r = await api.updateTask(projectId, id, { is_done: data.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
-					async () => { const r = await api.updateTask(projectId, id, { is_done: prev.is_done }); allTasks = allTasks.map(t => t.id === id ? r : t); },
+					async () => { const r = await api.updateTask(projectId, id, { is_done: data.is_done }); trackDone(id, data.is_done); allTasks = allTasks.map(t => t.id === id ? r : t); },
+					async () => { const r = await api.updateTask(projectId, id, { is_done: prev.is_done }); trackDone(id, prev.is_done); allTasks = allTasks.map(t => t.id === id ? r : t); },
 				);
 			}
 			return updated;
 		} catch (e) {
-			if (prev) allTasks = allTasks.map(t => t.id === id ? prev : t);
+			if (prev) { allTasks = allTasks.map(t => t.id === id ? prev : t); trackDone(id, prev.is_done); }
 			toast.error('Failed to update task');
 			throw e;
 		}
@@ -190,7 +200,7 @@ function createDataStore() {
 						const restored = await api.createTask(projectId, { title: deleted.title, description: deleted.description || undefined });
 						restoredId = restored.id;
 						if (deleted.due_date) await api.updateTask(projectId, restored.id, { due_date: deleted.due_date });
-						if (deleted.is_done) await api.updateTask(projectId, restored.id, { is_done: true });
+						if (deleted.is_done) { await api.updateTask(projectId, restored.id, { is_done: true }); trackDone(restored.id, true); }
 						allTasks = await api.listAllTasks();
 					},
 				);
@@ -208,6 +218,7 @@ function createDataStore() {
 	function reset() {
 		projects = [];
 		allTasks = [];
+		doneThisSession = new Set();
 		initialized = false;
 	}
 
@@ -232,6 +243,7 @@ function createDataStore() {
 		get canUndo() { return undoStack.length > 0; },
 		get canRedo() { return redoStack.length > 0; },
 		get recentlyAdded() { return recentlyAdded; },
+		get doneThisSession() { return doneThisSession; },
 		tasksForProject,
 		reset,
 	};
