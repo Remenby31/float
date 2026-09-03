@@ -1,42 +1,13 @@
-# sv
+# Float frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+React 19 SPA built with Vite, TanStack Router, TanStack Query, Tailwind 4, Zustand, and TipTap 3.
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.15.2 create --template minimal --types ts --no-install frontend
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+```bash
+npm ci
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+npm run check
 ```
 
-## Building
+The dev server proxies `/api` to `http://localhost:3000`. Set `FLOAT_API_PROXY_TARGET` to use another API origin during integration testing.
 
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Server data is owned by TanStack Query. UI-only state and undo/redo live in Zustand. Feature modules do not import one another; composition belongs in `src/app` and `src/routes`.
