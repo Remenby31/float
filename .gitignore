@@ -13,3 +13,6 @@ frontend/.svelte-kit/
 .secrets
 .mcp.json
 float_backup_20260610.sql
+float.db
+float.db-shm
+float.db-wal
