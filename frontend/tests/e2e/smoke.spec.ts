@@ -52,8 +52,8 @@ test('workspace remains usable at a mobile viewport', async ({ page }) => {
   await page.getByRole('button', { name: 'sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
 
-  await page.getByRole('button', { name: 'toggle menu' }).click();
-  const sidebar = page.getByRole('complementary', { name: 'workspace navigation' });
-  await expect(sidebar).toBeVisible();
-  await expect(sidebar.getByRole('button', { name: /search/ })).toBeVisible();
+  const search = page.getByRole('button', { name: 'search', exact: true });
+  await expect(search).toBeVisible();
+  await search.click();
+  await expect(page.getByRole('dialog', { name: 'command palette' })).toBeVisible();
 });

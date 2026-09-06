@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { CheckIcon, ChevronRightIcon, PaperclipIcon, PlusIcon, RedoIcon, TrashIcon, UndoIcon } from '@/components/icons';
+import { CheckIcon, ChevronRightIcon, PaperclipIcon, PlusIcon, TrashIcon } from '@/components/icons';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import type { WorkspaceModel } from '@/features/workspace/hooks/use-workspace';
 import { useHistoryStore } from '@/features/workspace/stores/history-store';
@@ -34,7 +34,6 @@ export function WorkspacePage({ workspace }: WorkspacePageProps) {
   const [recursiveAppearance, setRecursiveAppearance] = useState<{ parentId: string; icon: string } | null>(null);
   const [expandedOverrides, setExpandedOverrides] = useState<Record<string, boolean>>({});
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
-  const history = useHistoryStore();
 
   const groups = workspace.projects.filter((project) => !project.parent_id);
   const childrenOf = (projectId: string) => workspace.projects.filter((project) => project.parent_id === projectId);
@@ -108,17 +107,6 @@ export function WorkspacePage({ workspace }: WorkspacePageProps) {
   return (
     <>
       <main className="mx-auto max-w-6xl px-3 py-4 md:px-5 md:py-6">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-text-muted">this week</p>
-            <p className="mt-1 text-sm text-text-secondary">{workspace.tasks.filter((task) => !task.is_done).length} open tasks</p>
-          </div>
-          <div className="flex items-center gap-0.5">
-            <button className="icon-button" disabled={!history.undoStack.length} onClick={() => void history.undo()} title="Undo (⌘Z)" type="button"><UndoIcon size={15} /></button>
-            <button className="icon-button" disabled={!history.redoStack.length} onClick={() => void history.redo()} title="Redo (⌘⇧Z)" type="button"><RedoIcon size={15} /></button>
-          </div>
-        </div>
-
         {hasDatedTasks ? (
           <WeekView
             hoveredTaskId={hoveredTaskId}

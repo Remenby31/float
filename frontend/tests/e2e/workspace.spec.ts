@@ -58,7 +58,7 @@ test.describe('workspace', () => {
 
   test('week view shows dated, overdue and later tasks from the seed', async ({ page }) => {
     await login(page);
-    await expect(page.getByText('this week')).toBeVisible();
+    await expect(page.getByText(/\d+ open/)).toBeVisible();
     // Seeded dated tasks surface in the week grid.
     await expect(page.getByText('Acheter du pain', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Appeler le plombier', { exact: true }).first()).toBeVisible(); // overdue
@@ -165,10 +165,7 @@ test.describe('workspace', () => {
     const html = page.locator('html');
     const before = (await html.getAttribute('class')) ?? '';
 
-    await page.getByRole('button', { name: 'toggle menu' }).click();
-    const sidebar = page.getByRole('complementary', { name: 'workspace navigation' });
-    await expect(sidebar).toBeVisible();
-    await sidebar.getByRole('button', { name: 'toggle theme' }).click();
+    await page.getByRole('button', { name: 'toggle theme' }).click();
 
     await expect(async () => {
       const after = (await html.getAttribute('class')) ?? '';

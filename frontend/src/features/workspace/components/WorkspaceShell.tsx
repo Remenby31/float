@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 
-import { CloseIcon, MenuIcon, MoonIcon, PlusIcon, SearchIcon, SunIcon, TrashIcon } from '@/components/icons';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { MoonIcon, RedoIcon, SearchIcon, SunIcon, UndoIcon } from '@/components/icons';
 import { CommandPalette } from '@/features/workspace/components/CommandPalette';
-import { ColorPicker } from '@/features/workspace/components/ColorPicker';
 import { WorkspacePage } from '@/features/workspace/components/WorkspacePage';
 import { useWorkspace } from '@/features/workspace/hooks/use-workspace';
 import { useWorkspaceSync } from '@/features/workspace/hooks/use-workspace-sync';
@@ -18,16 +16,11 @@ export function WorkspaceShell({ user }: { user: User }) {
   const navigate = useNavigate();
   const workspace = useWorkspace();
   const theme = useUiStore((state) => state.theme);
-  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
   const commandOpen = useUiStore((state) => state.commandOpen);
-  const setSidebarOpen = useUiStore((state) => state.setSidebarOpen);
   const setCommandOpen = useUiStore((state) => state.setCommandOpen);
   const toggleTheme = useUiStore((state) => state.toggleTheme);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [adding, setAdding] = useState<false | string | 'root'>(false);
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
-  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string; hasTasks: boolean } | null>(null);
+  const undoStack = useHistoryStore((state) => state.undoStack);
+  const redoStack = useHistoryStore((state) => state.redoStack);
 
   useWorkspaceSync();
 
@@ -62,141 +55,70 @@ export function WorkspaceShell({ user }: { user: User }) {
         if (event.shiftKey) void useHistoryStore.getState().redo();
         else void useHistoryStore.getState().undo();
       }
-      if (key === 'escape') {
-        if (useUiStore.getState().commandOpen) return;
-        setSidebarOpen(false);
-      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [setCommandOpen, setSidebarOpen]);
+  }, [setCommandOpen]);
 
-  useEffect(() => {
-    const locked = sidebarOpen || commandOpen || Boolean(confirmDelete);
-    document.body.style.overflow = locked ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [commandOpen, confirmDelete, sidebarOpen]);
-
-  const parents = workspace.projects.filter((project) => !project.parent_id);
-  const childrenOf = (parentId: string) => workspace.projects.filter((project) => project.parent_id === parentId);
-
-  const addProject = async () => {
-    if (!newTitle.trim() || adding === false) return;
-    const parentId = adding === 'root' ? undefined : adding;
-    const project = await workspace.createProject({ title: newTitle.trim(), parent_id: parentId });
-    setNewTitle('');
-    setAdding(false);
-    if (parentId) {
-      setCollapsed((current) => {
-        const next = new Set(current);
-        next.delete(parentId);
-        return next;
-      });
-    }
-    window.setTimeout(() => scrollToProject(project.id), 100);
-  };
-
-  const scrollToProject = (projectId: string) => {
-    setSidebarOpen(false);
-    document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const askDelete = (projectId: string) => {
-    const project = workspace.projects.find((candidate) => candidate.id === projectId);
-    if (!project) return;
-    const childIds = workspace.projects.filter((candidate) => candidate.parent_id === projectId).map((candidate) => candidate.id);
-    const hasTasks = workspace.tasks.some((task) => task.project_id === projectId || childIds.includes(task.project_id));
-    if (hasTasks || childIds.length) setConfirmDelete({ id: projectId, title: project.title, hasTasks });
-    else void workspace.deleteProject(projectId);
-  };
+  const openCount = workspace.tasks.filter((task) => !task.is_done).length;
 
   return (
     <div className="min-h-screen bg-bg text-text">
-      <header className="fixed bottom-0 left-0 z-40 flex items-center gap-1 rounded-tr-2xl border-r border-t border-border/70 bg-bg/80 px-2 py-2 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-xl safe-bottom">
-        <button aria-label="toggle menu" className="icon-button" onClick={() => setSidebarOpen(!sidebarOpen)} type="button"><MenuIcon size={14} /></button>
-        <button aria-label="search" className="icon-button" onClick={() => setCommandOpen(true)} type="button"><SearchIcon size={14} /></button>
-      </header>
-
-      {sidebarOpen ? <button aria-label="close menu" className="fade-in fixed inset-0 z-40 bg-black/55 backdrop-blur-[3px]" onClick={() => setSidebarOpen(false)} type="button" /> : null}
-      <aside aria-hidden={!sidebarOpen} aria-label="workspace navigation" className={`fixed inset-y-0 left-0 z-50 flex w-72 select-none flex-col border-r border-border bg-elevated/95 shadow-2xl backdrop-blur-xl transition-transform duration-200 safe-bottom safe-top ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} inert={!sidebarOpen}>
-        <div className="flex items-center justify-between px-3 pb-1 pt-3">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">float</span>
-          <button aria-label="close menu" className="icon-button" onClick={() => setSidebarOpen(false)} type="button"><CloseIcon size={14} /></button>
+      <header className="safe-top sticky top-0 z-40 border-b border-border/70 bg-bg/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-3 py-2.5 md:px-5">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold tracking-tight text-text">float</span>
+            <span className="text-xs text-text-muted">{openCount} open</span>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <button aria-label="search" className="icon-button" onClick={() => setCommandOpen(true)} title="Search (⌘K)" type="button"><SearchIcon size={15} /></button>
+            <button className="icon-button" disabled={!undoStack.length} onClick={() => void useHistoryStore.getState().undo()} title="Undo (⌘Z)" type="button"><UndoIcon size={15} /></button>
+            <button className="icon-button" disabled={!redoStack.length} onClick={() => void useHistoryStore.getState().redo()} title="Redo (⌘⇧Z)" type="button"><RedoIcon size={15} /></button>
+            <button aria-label="toggle theme" className="icon-button" onClick={toggleTheme} type="button">{theme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}</button>
+            <ProfileMenu onLogout={() => void logout()} user={user} />
+          </div>
         </div>
-        <nav className="scrollbar-thin flex-1 space-y-0.5 overflow-y-auto p-2">
-          <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-text-secondary hover:bg-surface/70 hover:text-text" onClick={() => { setCommandOpen(true); setSidebarOpen(false); }} type="button">
-            <SearchIcon size={14} />
-            <span className="flex-1 text-left">search</span>
-            <kbd className="hidden rounded border border-border bg-surface px-1 py-0.5 font-mono text-[9px] text-text-muted md:inline">⌘K</kbd>
-          </button>
-
-          <div className="h-1" />
-          {parents.map((group) => {
-            const children = childrenOf(group.id);
-            const hasChildren = children.length > 0;
-            const hidden = collapsed.has(group.id);
-            return (
-              <div key={group.id}>
-                <div className="group mt-3 flex items-center first:mt-0">
-                  <div className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-1 ${hasChildren ? '' : 'rounded-lg hover:bg-surface/60'}`}>
-                    <ColorPicker color={group.color} icon={group.icon} onChange={(color, icon) => workspace.updateProject(group.id, { color, icon })} />
-                    {hasChildren ? (
-                      <button className="min-w-0 flex-1 truncate text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted" onClick={() => setCollapsed((current) => { const next = new Set(current); if (next.has(group.id)) next.delete(group.id); else next.add(group.id); return next; })} type="button">{group.title}</button>
-                    ) : (
-                      <button className="min-w-0 flex-1 truncate text-left text-[13px] text-text-muted hover:text-text-secondary" onClick={() => scrollToProject(group.id)} type="button">{group.title}</button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100">
-                    <button className="grid h-5 w-5 place-items-center rounded text-text-muted hover:text-text" onClick={() => { setAdding(group.id); setNewTitle(''); }} title="add project" type="button"><PlusIcon size={10} /></button>
-                    <button className="grid h-5 w-5 place-items-center rounded text-text-muted hover:text-danger" onClick={() => askDelete(group.id)} title="delete" type="button"><TrashIcon size={10} /></button>
-                  </div>
-                </div>
-
-                {!hidden ? children.map((child) => (
-                  <div className="group relative flex items-center pl-4" key={child.id}>
-                    <span className="absolute bottom-0 left-[9px] top-0 w-px bg-border" />
-                    <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1 hover:bg-surface/60">
-                      <ColorPicker color={child.color ?? group.color} icon={child.icon} onChange={(color, icon) => workspace.updateProject(child.id, { color, icon })} />
-                      <button className="min-w-0 flex-1 truncate text-left text-[13px] text-text-muted hover:text-text-secondary" onClick={() => scrollToProject(child.id)} type="button">{child.title}</button>
-                    </div>
-                    <button className="grid h-5 w-5 place-items-center rounded text-text-muted hover:text-danger opacity-100 md:opacity-0 md:group-hover:opacity-100" onClick={() => askDelete(child.id)} title="delete" type="button"><TrashIcon size={9} /></button>
-                  </div>
-                )) : null}
-
-                {adding === group.id ? <SidebarInput onCancel={() => setAdding(false)} onChange={setNewTitle} onSubmit={() => void addProject()} placeholder="project name" value={newTitle} /> : null}
-              </div>
-            );
-          })}
-
-          {adding === 'root' ? (
-            <SidebarInput onCancel={() => setAdding(false)} onChange={setNewTitle} onSubmit={() => void addProject()} placeholder="group name" value={newTitle} />
-          ) : adding === false ? (
-            <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-text-muted hover:bg-surface/60 hover:text-text-secondary" onClick={() => { setAdding('root'); setNewTitle(''); }} type="button"><PlusIcon size={12} />new group</button>
-          ) : null}
-        </nav>
-
-        <footer className="flex items-center justify-between border-t border-border p-2">
-          <button className="group flex min-w-0 items-center gap-2" onClick={() => profileOpen ? void logout() : setProfileOpen(true)} type="button">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent text-[11px] font-semibold text-accent-fg transition-transform group-hover:scale-105">{user.username.slice(0, 1).toUpperCase()}</span>
-            <span className={`truncate text-xs ${profileOpen ? 'text-danger' : 'text-text-muted group-hover:text-text-secondary'}`}>{profileOpen ? 'sign out' : user.username}</span>
-          </button>
-          <button aria-label="toggle theme" className="icon-button" onClick={toggleTheme} type="button">{theme === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}</button>
-        </footer>
-      </aside>
+      </header>
 
       <WorkspacePage workspace={workspace} />
       {commandOpen ? <CommandPalette onOpenChange={setCommandOpen} open workspace={workspace} /> : null}
-      {confirmDelete ? <ConfirmDialog message={confirmDelete.hasTasks ? 'this contains tasks that will be permanently deleted.' : 'this will be permanently deleted.'} onCancel={() => setConfirmDelete(null)} onConfirm={async () => { await workspace.deleteProject(confirmDelete.id); setConfirmDelete(null); }} title={`delete “${confirmDelete.title}”?`} /> : null}
     </div>
   );
 }
 
-function SidebarInput({ value, placeholder, onChange, onSubmit, onCancel }: { value: string; placeholder: string; onChange: (value: string) => void; onSubmit: () => void; onCancel: () => void }) {
+function ProfileMenu({ user, onLogout }: { user: User; onLogout: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
   return (
-    <form className="px-2 py-1" onSubmit={(event) => { event.preventDefault(); onSubmit(); }}>
-      <input autoFocus className="field !rounded-lg !px-2 !py-1 !text-[13px]" onBlur={() => !value && onCancel()} onChange={(event) => onChange(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') onCancel(); }} placeholder={placeholder} value={value} />
-    </form>
+    <div className="relative ml-0.5" ref={ref}>
+      <button aria-label="account" className="grid h-7 w-7 place-items-center rounded-full bg-accent text-[11px] font-semibold text-accent-fg transition-transform hover:scale-105" onClick={() => setOpen((value) => !value)} type="button">
+        {user.username.slice(0, 1).toUpperCase()}
+      </button>
+      {open ? (
+        <div className="modal-in absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-elevated/95 shadow-2xl backdrop-blur-xl">
+          <div className="border-b border-border px-3 py-2">
+            <p className="truncate text-xs text-text-secondary">{user.username}</p>
+          </div>
+          <button className="flex w-full items-center px-3 py-2 text-left text-sm text-text-secondary transition hover:bg-surface/70 hover:text-danger" onClick={onLogout} type="button">sign out</button>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -4,9 +4,7 @@ type Theme = 'dark' | 'light';
 
 interface UiState {
   theme: Theme;
-  sidebarOpen: boolean;
   commandOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
   setCommandOpen: (open: boolean) => void;
   toggleTheme: () => void;
 }
@@ -19,9 +17,7 @@ function preferredTheme(): Theme {
 export const useUiStore = create<UiState>()(
   (set) => ({
     theme: storedTheme(),
-    sidebarOpen: false,
     commandOpen: false,
-    setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
     setCommandOpen: (commandOpen) => set({ commandOpen }),
     toggleTheme: () =>
       set((state) => {
