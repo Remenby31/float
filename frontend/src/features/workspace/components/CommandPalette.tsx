@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { CheckIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '@/components/icons';
 import type { WorkspaceModel } from '@/features/workspace/hooks/use-workspace';
+import { startOfDay } from '@/features/workspace/utils/dates';
 import { getSuggestions, parseInput, type Suggestion } from '@/features/workspace/utils/smart-input';
 import type { Project } from '@/types/api';
 
@@ -135,7 +136,10 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
     }
     const parsed = parseInput(creatingTask);
     const projectId = selectedProjectId;
-    await workspace.createTask(projectId, { title: parsed.title || title, due_date: parsed.due_date });
+    await workspace.createTask(projectId, {
+      title: parsed.title || title,
+      due_date: parsed.due_date ?? startOfDay(new Date()).toISOString(),
+    });
     onOpenChange(false);
     window.setTimeout(() => document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
   };
@@ -257,7 +261,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
                   placeholder="new task..."
                   value={creatingTask}
                 />
-                {parsedPreview.due_date ? <DateChip value={parsedPreview.due_date} /> : null}
+                <DateChip value={parsedPreview.due_date ?? startOfDay(new Date()).toISOString()} />
               </div>
               {showAtSuggestions && atSource === 'create' ? <SuggestionList items={atSuggestions} selectedIndex={atSelectedIndex} onSelect={applyAtSuggestion} /> : null}
               <div className="mt-3 flex items-center gap-2">
