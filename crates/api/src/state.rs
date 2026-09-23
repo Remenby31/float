@@ -1,6 +1,9 @@
 use sea_orm::DatabaseConnection;
 use serde::Serialize;
-use tokio::sync::broadcast;
+use std::sync::Arc;
+use tokio::sync::{broadcast, Semaphore};
+
+use crate::login_guard::LoginGuard;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct SyncEvent {
@@ -15,20 +18,30 @@ pub struct AppState {
     pub db: DatabaseConnection,
     pub jwt_secret: String,
     pub events_tx: broadcast::Sender<SyncEvent>,
+    pub login_guard: Arc<LoginGuard>,
+    pub login_slots: Arc<Semaphore>,
 }
 
 impl AppState {
     pub fn new(db: DatabaseConnection, jwt_secret: String) -> Self {
         let (events_tx, _) = broadcast::channel(256);
-        Self { db, jwt_secret, events_tx }
+        Self {
+            db,
+            jwt_secret,
+            events_tx,
+            login_guard: Arc::new(LoginGuard::default()),
+            login_slots: Arc::new(Semaphore::new(4)),
+        }
     }
 
     pub fn emit(&self, kind: &str, action: &str, id: &str, user_id: &str) {
-        self.events_tx.send(SyncEvent {
-            kind: kind.to_string(),
-            action: action.to_string(),
-            id: id.to_string(),
-            user_id: user_id.to_string(),
-        }).ok(); // ignore if no listeners
+        self.events_tx
+            .send(SyncEvent {
+                kind: kind.to_string(),
+                action: action.to_string(),
+                id: id.to_string(),
+                user_id: user_id.to_string(),
+            })
+            .ok(); // ignore if no listeners
     }
 }

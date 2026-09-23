@@ -1,12 +1,14 @@
-FROM rust:slim AS build
+FROM rust:slim@sha256:f47a8de237dcbb0b0ce1099901e60a89728e3d51f24e664b40e947171538ade7 AS build
 WORKDIR /app
 RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev && rm -rf /var/lib/apt/lists/*
 COPY Cargo.toml Cargo.lock* ./
 COPY crates ./crates
-RUN cargo build --release --bin float-api
+RUN cargo build --locked --release --bin float-api \
+    && mkdir -p /runtime/data /runtime/files
 
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates libssl3 libsqlite3-0 && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /app/data
+# The API links only libc/libm/libgcc: no shell, Perl, system SQLite or OpenSSL needed.
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:54df941ed0d06a1bd95ef5e0ce391fd8d9f94b64782dc9a60062727849ee3f97
+COPY --from=build --chown=65532:65532 /runtime/ /app/
 COPY --from=build /app/target/release/float-api /usr/local/bin/float-api
-CMD ["float-api"]
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/float-api"]

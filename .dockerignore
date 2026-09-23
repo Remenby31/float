@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+.secrets
+.codex
+.playwright-cli
+target
+**/node_modules
+**/dist
+**/test-results
+**/playwright-report
+**/coverage
+*.db
+*.db-shm
+*.db-wal
