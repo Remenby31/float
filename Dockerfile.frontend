@@ -14,6 +14,7 @@ RUN apk add --no-cache ca-certificates tzdata \
     && mkdir -p /config /data /etc/caddy /srv \
     && chown -R caddy:caddy /config /data
 COPY --from=caddy-build /caddy /usr/bin/caddy
+COPY --chown=65532:65532 deploy/Caddyfile /etc/caddy/Caddyfile
 ENV XDG_CONFIG_HOME=/config XDG_DATA_HOME=/data
 USER 65532:65532
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
@@ -27,5 +28,5 @@ RUN npm run build
 
 FROM caddy-runtime AS frontend
 COPY --from=build /app/dist /srv
-COPY frontend/Caddyfile /etc/caddy/Caddyfile
+COPY --chown=65532:65532 frontend/Caddyfile /etc/caddy/Caddyfile
 EXPOSE 3001

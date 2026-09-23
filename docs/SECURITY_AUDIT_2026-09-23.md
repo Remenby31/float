@@ -63,6 +63,8 @@ La dernière release stable de Caddy consultée est **2.11.4**, mais son binaire
 
 Les images de base sont épinglées par digest. Les deux conteneurs Caddy sont non-root, avec système de fichiers en lecture seule, stockage temporaire isolé, sans interface d'administration ; tous les services perdent les capabilities Linux et utilisent `no-new-privileges`.
 
+Les configurations Caddy sont embarquées et appartiennent explicitement à l'UID/GID `65532`, plutôt que dépendre des permissions d'un bind mount hôte. Une première bascule a révélé un problème de `umask` dans le script opérateur : des fichiers `0600` avaient provoqué un bref HTTP 502. Le service a été rétabli avec les images candidates validées ; ce conditionnement garantit ensuite leur lecture même avec un checkout restrictif. Les sauvegardes contenant des secrets restent privées, séparément des fichiers de configuration publics.
+
 Résiduels Caddy :
 
 1. **GHSA-gcjh-h69q-9w9g — cel-go 0.28.1**, moyenne, corrigé en 0.29.0. La mise à jour casse l'API utilisée par Caddy 2.11.4 ; elle n'a pas été forcée. L'avis concerne `NativeTypes`/`ParseStructTag`, non activés dans notre configuration. Suivre une release Caddy compatible et refaire le scan.
