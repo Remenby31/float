@@ -6,32 +6,53 @@ services:
     container_name: float-api
     environment:
       DATABASE_URL: sqlite:///app/data/float.db?mode=rwc
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:?Set a random JWT_SECRET of at least 32 bytes in .env}
       PORT: "3000"
       FILES_DIR: /app/files
     volumes:
       - float-files:/app/files
       - float-data:/app/data
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   frontend:
     build:
-      context: ../frontend
-      dockerfile: ../Dockerfile.frontend
+      context: ..
+      dockerfile: Dockerfile.frontend
     container_name: float-frontend
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ..
+      dockerfile: Dockerfile.frontend
+      target: caddy-runtime
     container_name: float-caddy
     ports:
-      - "8888:80"
+      - "8888:8080"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:
       - api
       - frontend
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   float-files:

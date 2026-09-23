@@ -1,11 +1,31 @@
-FROM node:22-slim AS build
+FROM golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS caddy-build
+WORKDIR /src
+COPY deploy/caddy/go.mod deploy/caddy/go.sum ./
+RUN go mod download
+COPY deploy/caddy/main.go ./
+RUN CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="-s -w" -o /caddy .
+
+# Caddy's latest release image still embeds vulnerable Go dependencies.
+# Share this rebuilt, locked runtime between the proxy and static frontend.
+FROM alpine:3.23.6@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0 AS caddy-runtime
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S -g 65532 caddy \
+    && adduser -S -D -H -u 65532 -G caddy caddy \
+    && mkdir -p /config /data /etc/caddy /srv \
+    && chown -R caddy:caddy /config /data
+COPY --from=caddy-build /caddy /usr/bin/caddy
+ENV XDG_CONFIG_HOME=/config XDG_DATA_HOME=/data
+USER 65532:65532
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+
+FROM node:22-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 AS build
 WORKDIR /app
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci
-COPY . .
+COPY frontend/ .
 RUN npm run build
 
-FROM caddy:2-alpine
+FROM caddy-runtime AS frontend
 COPY --from=build /app/dist /srv
-COPY Caddyfile /etc/caddy/Caddyfile
+COPY frontend/Caddyfile /etc/caddy/Caddyfile
 EXPOSE 3001

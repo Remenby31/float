@@ -9,6 +9,8 @@ pub enum AppError {
     NotFound,
     #[error("unauthorized")]
     Unauthorized,
+    #[error("too many login attempts; try again later")]
+    TooManyRequests,
     #[error("bad request: {0}")]
     BadRequest(String),
     #[error("conflict: {0}")]
@@ -24,15 +26,22 @@ impl IntoResponse for AppError {
         let (status, message) = match &self {
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::TooManyRequests => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
             AppError::Db(e) => {
                 tracing::error!("database error: {e}");
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal error".to_string(),
+                )
             }
             AppError::Other(e) => {
                 tracing::error!("internal error: {e}");
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal error".to_string(),
+                )
             }
         };
         (status, Json(json!({ "error": message }))).into_response()

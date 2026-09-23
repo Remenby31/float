@@ -39,14 +39,28 @@ async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginInput>,
 ) -> ApiResult<Json<AuthResponse>> {
+    if !state.login_guard.allow(&input.email) {
+        return Err(AppError::TooManyRequests);
+    }
+    let permit = state
+        .login_slots
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| AppError::TooManyRequests)?;
     let user = user::Entity::find()
         .filter(user::Column::Email.eq(&input.email))
         .one(&state.db)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    let valid = bcrypt::verify(&input.password, &user.password_hash)
-        .map_err(|e| AppError::Other(e.into()))?;
+    let password_hash = user.password_hash.clone();
+    let valid = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        bcrypt::verify(&input.password, &password_hash)
+    })
+    .await
+    .map_err(|e| AppError::Other(e.into()))?
+    .map_err(|e| AppError::Other(e.into()))?;
 
     if !valid {
         return Err(AppError::Unauthorized);
@@ -64,10 +78,7 @@ async fn login(
     }))
 }
 
-async fn me(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> ApiResult<Json<UserResponse>> {
+async fn me(State(state): State<AppState>, auth: AuthUser) -> ApiResult<Json<UserResponse>> {
     let user = user::Entity::find_by_id(auth.user_id)
         .one(&state.db)
         .await?
