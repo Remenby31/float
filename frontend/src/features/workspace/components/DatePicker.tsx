@@ -50,8 +50,8 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
       const goUp = window.innerHeight - rect.bottom < 350;
       setPosition(
         goUp
-          ? { position: 'fixed', bottom: window.innerHeight - rect.top + 4, left: Math.min(rect.left, window.innerWidth - 272) }
-          : { position: 'fixed', top: rect.bottom + 4, left: Math.min(rect.left, window.innerWidth - 272) },
+          ? { position: 'fixed', bottom: window.innerHeight - rect.top + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - 304)) }
+          : { position: 'fixed', top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - 304)) },
       );
     }
     setViewDate(value ? new Date(value) : new Date());
@@ -104,9 +104,8 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
     <div>
       <button
         ref={triggerRef}
-        className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition ${
-          value ? 'border-border-strong bg-surface text-text' : 'border-border text-text-muted hover:bg-surface/60 hover:text-text-secondary'
-        }`}
+        aria-expanded={open}
+        className="secondary-button"
         onClick={openPicker}
         type="button"
       >
@@ -119,13 +118,14 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
             <>
               <button
                 aria-label="close date picker"
-                className={`fixed inset-0 z-[75] ${isMobile ? 'bg-black/50 backdrop-blur-[2px]' : ''}`}
+                className={`fixed inset-0 z-[75] ${isMobile ? 'bg-black/50' : ''}`}
                 data-floating-overlay="true"
                 onClick={() => setOpen(false)}
                 type="button"
               />
               <section
-                className={`${isMobile ? 'modal-in fixed inset-x-0 bottom-0 z-[80] w-full rounded-t-2xl safe-bottom' : 'modal-in z-[80] w-64 rounded-xl'} overflow-hidden border border-border bg-elevated shadow-2xl`}
+                aria-label="Choose a date"
+                className={`${isMobile ? 'modal-in fixed inset-x-0 bottom-0 z-[80] w-full rounded-t-lg safe-bottom' : 'modal-in z-[80] w-72'} popover-panel overflow-hidden`}
                 data-floating-overlay="true"
                 onClick={(event) => event.stopPropagation()}
                 style={isMobile ? undefined : position}
@@ -141,6 +141,7 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
                 <div className="border-b border-border p-2">
                   <input
                     ref={inputRef}
+                    aria-label="Type a date"
                     className="field !rounded-lg !px-2.5 !py-1.5 !text-xs"
                     onChange={(event) => setTextInput(event.target.value)}
                     onKeyDown={(event) => {
@@ -176,9 +177,9 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
 
                 <div className="p-2">
                   <div className="mb-2 flex items-center justify-between px-1">
-                    <button aria-label="previous month" className="icon-button !h-5 !w-5" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} type="button"><ChevronLeftIcon size={10} /></button>
+                    <button aria-label="previous month" className="icon-button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} type="button"><ChevronLeftIcon size={14} /></button>
                     <span className="text-[11px] font-medium text-text-secondary">{viewDate.toLocaleDateString('en', { month: 'long', year: 'numeric' }).toLowerCase()}</span>
-                    <button aria-label="next month" className="icon-button !h-5 !w-5" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} type="button"><ChevronRightIcon size={10} /></button>
+                    <button aria-label="next month" className="icon-button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} type="button"><ChevronRightIcon size={14} /></button>
                   </div>
                   <div className="mb-1 grid grid-cols-7">
                     {['m', 't', 'w', 't', 'f', 's', 's'].map((day, index) => <div className="py-0.5 text-center text-[9px] text-text-muted" key={`${day}-${index}`}>{day}</div>)}
@@ -187,7 +188,9 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
                     {calendarDays.map((day, index) =>
                       day ? (
                         <button
-                          className={`aspect-square rounded-md text-[11px] transition ${isSelected(day, viewDate, value) ? 'bg-accent font-medium text-accent-fg' : isToday(day, viewDate) ? 'font-medium text-text ring-1 ring-border-strong' : 'text-text-secondary hover:bg-surface hover:text-text'}`}
+                          aria-label={new Date(viewDate.getFullYear(), viewDate.getMonth(), day).toLocaleDateString('en', { dateStyle: 'full' })}
+                          aria-pressed={isSelected(day, viewDate, value)}
+                          className={`min-h-9 rounded-sm text-xs transition ${isSelected(day, viewDate, value) ? 'bg-accent font-medium text-accent-fg' : isToday(day, viewDate) ? 'font-medium text-text ring-1 ring-border-strong' : 'text-text-secondary hover:bg-surface hover:text-text'}`}
                           key={`${day}-${index}`}
                           onClick={() => void setDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 9, 0, 0))}
                           type="button"
@@ -208,7 +211,7 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
 }
 
 function QuickDate({ label, onClick }: { label: string; onClick: () => void }) {
-  return <button className="rounded-lg bg-surface px-2.5 py-1 text-xs text-text-secondary hover:bg-tertiary hover:text-text" onClick={onClick} type="button">{label}</button>;
+  return <button className="min-h-11 rounded-sm bg-surface px-2.5 text-xs text-text-secondary hover:bg-tertiary hover:text-text" onClick={onClick} type="button">{label}</button>;
 }
 
 function formatInputTime(date: Date) {

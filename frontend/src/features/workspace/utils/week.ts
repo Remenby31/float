@@ -2,7 +2,7 @@ import type { Project, Task } from '@/types/api';
 import type { DatedTask, WeekData, WeekDay } from '@/features/workspace/types';
 import { startOfDay } from '@/features/workspace/utils/dates';
 
-export function buildWeekData(projects: Project[], tasks: Task[], today = new Date()): WeekData {
+export function buildWeekData(projects: Project[], tasks: Task[], today = new Date(), visibleDone: ReadonlySet<string> = new Set()): WeekData {
   const now = startOfDay(today);
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -26,7 +26,7 @@ export function buildWeekData(projects: Project[], tasks: Task[], today = new Da
   endOfWeek.setDate(monday.getDate() + 7);
 
   for (const task of tasks) {
-    if (task.is_done || !task.due_date) continue;
+    if ((task.is_done && !visibleDone.has(task.id)) || !task.due_date) continue;
     const project = projects.find((candidate) => candidate.id === task.project_id);
     const parent = project?.parent_id ? projects.find((candidate) => candidate.id === project.parent_id) : undefined;
     const family = parent ?? project;

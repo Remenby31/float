@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { useDialogFocus } from '@/hooks/use-dialog-focus';
 
 interface ConfirmDialogProps {
   title: string;
@@ -9,6 +10,10 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({ title, message, confirmLabel = 'delete', onConfirm, onCancel }: ConfirmDialogProps) {
+  const dialogRef = useDialogFocus();
+  const titleId = useId();
+  const messageId = useId();
+  const [pending, setPending] = useState(false);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onCancel();
@@ -19,13 +24,14 @@ export function ConfirmDialog({ title, message, confirmLabel = 'delete', onConfi
 
   return (
     <div className="fixed inset-0 z-[90] grid place-items-center px-4">
-      <button aria-label="close confirmation" className="fade-in absolute inset-0 bg-black/55 backdrop-blur-[3px]" onClick={onCancel} type="button" />
-      <section aria-modal="true" className="modal-in relative w-full max-w-sm rounded-2xl border border-border bg-elevated p-5 shadow-2xl" role="alertdialog">
-        <p className="text-sm font-medium text-text">{title}</p>
-        <p className="mt-1.5 text-sm leading-6 text-text-muted">{message}</p>
+      <button aria-label="close confirmation" className="fade-in overlay-backdrop" onClick={onCancel} tabIndex={-1} type="button" />
+      <section ref={dialogRef} aria-labelledby={titleId} aria-describedby={messageId} aria-modal="true" className="dialog-surface modal-in relative w-full max-w-sm p-7" role="alertdialog" tabIndex={-1}>
+        <p className="eyebrow mb-4">A quick check</p>
+        <h2 className="section-title" id={titleId}>{title}</h2>
+        <p className="mt-4 text-sm leading-6 text-text-muted" id={messageId}>{message}</p>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="rounded-lg px-3 py-2 text-sm text-text-muted hover:bg-surface hover:text-text" onClick={onCancel} type="button">cancel</button>
-          <button className="rounded-lg bg-danger px-3 py-2 text-sm font-medium text-white hover:brightness-105" onClick={() => void onConfirm()} type="button">{confirmLabel}</button>
+          <button className="secondary-button" disabled={pending} onClick={onCancel} type="button">cancel</button>
+          <button className="primary-button" disabled={pending} onClick={async () => { setPending(true); try { await onConfirm(); } catch { setPending(false); } }} type="button">{pending ? 'Working…' : confirmLabel}</button>
         </div>
       </section>
     </div>

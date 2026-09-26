@@ -6,7 +6,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'src/routeTree.gen.ts'] },
+  { ignores: ['dist', 'src/routeTree.gen.ts', '.codex/**', '.playwright-cli/**', 'test-results*/**', 'playwright-report/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -30,11 +30,12 @@ export default tseslint.config(
           zones: [
             { target: './src/features', from: ['./src/app', './src/routes'] },
             {
-              target: ['./src/components', './src/lib', './src/stores', './src/types'],
+              target: ['./src/components', './src/hooks', './src/lib', './src/stores', './src/types'],
               from: ['./src/features', './src/app', './src/routes'],
             },
-            { target: './src/features/auth', from: './src/features/workspace' },
-            { target: './src/features/workspace', from: './src/features/auth' },
+            { target: './src/features/auth', from: './src/features', except: ['./auth'] },
+            { target: './src/features/workspace', from: './src/features', except: ['./workspace'] },
+            { target: './src/features/brand', from: './src/features', except: ['./brand'] },
           ],
         },
       ],

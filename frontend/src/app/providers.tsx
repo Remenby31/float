@@ -10,6 +10,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light');
     document.documentElement.style.colorScheme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#efeeea' : '#292927');
   }, [theme]);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;

@@ -31,6 +31,20 @@ function task(overrides: Partial<Task>): Task {
 }
 
 describe('buildWeekData', () => {
+  it('keeps all seven days even when there are no tasks', () => {
+    const result = buildWeekData([], [], new Date('2026-09-21T12:00:00.000Z'));
+    expect(result.days).toHaveLength(7);
+    expect(result.days.filter((day) => day.isToday)).toHaveLength(1);
+  });
+
+  it('shows only the completed tasks explicitly kept visible for this session', () => {
+    const completed = task({ id: 'done', is_done: true, due_date: '2026-09-21T09:00:00.000Z' });
+    const today = new Date('2026-09-21T12:00:00.000Z');
+    expect(buildWeekData([project], [completed], today).days[0].tasks).toHaveLength(0);
+    const result = buildWeekData([project], [completed], today, new Set(['done']));
+    expect(result.days[0].tasks[0].task.is_done).toBe(true);
+  });
+
   it('puts overdue tasks on today and later tasks after the current week', () => {
     const result = buildWeekData(
       [project],

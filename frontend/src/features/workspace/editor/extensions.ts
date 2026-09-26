@@ -66,14 +66,17 @@ export const TaskMention = Node.create({
       const dom = document.createElement('div');
       dom.contentEditable = 'false';
       dom.dataset.type = 'taskMention';
-      const checkbox = document.createElement('div');
-      checkbox.className = 'todo-checkbox';
+      const checkbox = document.createElement('button');
+      checkbox.type = 'button';
+      checkbox.className = 'todo-checkbox touch-target';
       const label = document.createElement('span');
       label.className = 'todo-label';
       dom.append(checkbox, label);
 
       const render = () => {
         const isDone = currentNode.attrs.id === 'done';
+        checkbox.setAttribute('aria-label', `Toggle ${currentNode.attrs.label}`);
+        checkbox.setAttribute('aria-pressed', String(isDone));
         dom.className = `todo-item ${isDone ? 'is-done' : ''}`;
         checkbox.innerHTML = isDone
           ? '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>'

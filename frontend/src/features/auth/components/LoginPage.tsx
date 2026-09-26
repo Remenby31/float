@@ -4,6 +4,9 @@ import { useNavigate } from '@tanstack/react-router';
 import { api, authToken } from '@/lib/api/client';
 import { queryClient } from '@/lib/query-client';
 import { meQueryOptions } from '@/features/auth/api/queries';
+import { Brand } from '@/components/Brand';
+import { MoonIcon, SunIcon } from '@/components/icons';
+import { useUiStore } from '@/stores/ui-store';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -14,6 +17,8 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [shaking, setShaking] = useState(false);
+  const theme = useUiStore((state) => state.theme);
+  const toggleTheme = useUiStore((state) => state.toggleTheme);
 
   useEffect(() => emailRef.current?.focus(), []);
 
@@ -47,25 +52,20 @@ export function LoginPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-5">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(128,132,255,0.16),transparent_42%)]" />
-      <section className="relative w-full max-w-sm">
-        <div className="mb-8 flex items-center gap-3">
-          <FloatMark />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-[-0.04em] text-text">float</h1>
-            <p className="mt-0.5 text-xs text-text-muted">clear the weight. keep moving.</p>
-          </div>
-        </div>
-
+    <main className="login-page safe-top">
+      <header className="login-masthead"><Brand /><p className="eyebrow">Make room for what matters.</p><button aria-label="toggle theme" className="icon-button" onClick={toggleTheme} type="button">{theme === 'dark' ? <SunIcon size={18} /> : <MoonIcon size={18} />}</button></header>
+      <div className="login-layout">
+        <section aria-label="Welcome to Float"><p className="eyebrow mb-7">A little less on your mind.</p><h1 className="login-statement"><span className="login-line">LESS<span className="login-word-break"> </span>NOISE.</span><span className="login-line">MORE<span className="login-word-break"> </span>DOING<span aria-hidden="true" className="brand-stop" /></span></h1><p className="login-caption">A simple place for your tasks, your projects, and a little room to breathe.</p></section>
+      <section className="login-form">
+        <p className="eyebrow">Your everyday, a little lighter.</p><h2 className="section-title">Welcome back.</h2><p className="login-form-intro">Pick up where you left off.</p>
         <form
-          className={`rounded-2xl border border-border bg-elevated/85 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.18)] backdrop-blur-xl ${shaking ? 'animate-shake' : ''}`}
+          className={shaking ? 'animate-shake' : ''}
           onSubmit={handleSubmit}
         >
-          <div className="space-y-3">
-            {error ? <p className="px-1 text-xs text-danger">{error}</p> : null}
+          <div>
+            {error ? <p className="login-error" role="alert">{error}</p> : null}
             <label className="block">
-              <span className="sr-only">email</span>
+              <span className="field-label">email</span>
               <input
                 ref={emailRef}
                 autoComplete="email"
@@ -73,21 +73,25 @@ export function LoginPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="email"
                 type="email"
+                required
                 value={email}
               />
             </label>
             <label className="relative block">
-              <span className="sr-only">password</span>
+              <span className="field-label">password</span>
               <input
                 autoComplete="current-password"
-                className="field pr-12"
+                aria-label="password"
+                className="field pr-16"
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="password"
                 type={showPassword ? 'text' : 'password'}
+                required
                 value={password}
               />
               <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted hover:text-text-secondary"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute bottom-0 right-0 h-12 px-4 text-xs text-text-muted hover:text-text-secondary"
                 onClick={() => setShowPassword((value) => !value)}
                 type="button"
               >
@@ -95,20 +99,13 @@ export function LoginPage() {
               </button>
             </label>
             <button className="primary-button w-full" disabled={submitting} type="submit">
-              {submitting ? <span className="spinner" aria-label="signing in" /> : 'sign in'}
+              {submitting ? <span className="spinner" aria-label="signing in" /> : <><span>sign in</span><span aria-hidden="true">↗</span></>}
             </button>
           </div>
         </form>
       </section>
+      </div>
+      <footer className="login-footer"><span className="eyebrow">One day at a time.</span><a className="eyebrow hover:text-text" href="/brand">The Float brand kit ↗</a></footer>
     </main>
-  );
-}
-
-function FloatMark() {
-  return (
-    <div className="relative h-11 w-11 rounded-2xl border border-border bg-surface shadow-sm">
-      <span className="absolute left-[13px] top-[8px] h-5 w-5 rounded-full bg-text" />
-      <span className="absolute bottom-[9px] left-[15px] h-1 w-4 rounded-full bg-text/15" />
-    </div>
   );
 }
