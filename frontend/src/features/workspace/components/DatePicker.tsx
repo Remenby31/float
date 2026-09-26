@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon } from '@/components/icons';
+import { useDialogFocus } from '@/hooks/use-dialog-focus';
 import { relativeDate, timeLabel } from '@/features/workspace/utils/dates';
 
 interface DatePickerProps {
@@ -12,11 +13,14 @@ interface DatePickerProps {
 export function DatePicker({ value, onChange }: DatePickerProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [viewDate, setViewDate] = useState(() => (value ? new Date(value) : new Date()));
   const [position, setPosition] = useState<React.CSSProperties>({});
   const [isMobile, setIsMobile] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
   const timeValue = value ? formatInputTime(new Date(value)) : '';
 
   const calendarDays = useMemo(() => {
@@ -31,10 +35,11 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape' && !pendingRef.current) { event.preventDefault(); setOpen(false); triggerRef.current?.focus(); }
     };
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 0);
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => { window.clearTimeout(timer); window.removeEventListener('keydown', onKeyDown); };
   }, [open]);
 
   const openPicker = () => {
@@ -55,15 +60,24 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
       );
     }
     setViewDate(value ? new Date(value) : new Date());
+    setError('');
     setOpen(true);
-    window.setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  const setDate = async (date: Date | null) => {
-    await onChange(date?.toISOString() ?? null);
-    setOpen(false);
-    setTextInput('');
+  const commitDate = async (nextValue: string | null, closeAfter = true) => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
+    setError('');
+    try {
+      if (nextValue !== value) await onChange(nextValue);
+      if (closeAfter) { setOpen(false); setTextInput(''); triggerRef.current?.focus(); }
+    } catch {
+      setError('Could not save the date. Choose it again to retry.');
+    } finally { pendingRef.current = false; setPending(false); }
   };
+
+  const setDate = (date: Date | null) => commitDate(date?.toISOString() ?? null);
 
   const setRelativeDate = (days: number) => {
     const date = new Date();
@@ -85,19 +99,20 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
     const [hours, minutes] = time.split(':').map(Number);
     const date = new Date(value);
     date.setHours(hours, minutes, 0, 0);
-    void onChange(date.toISOString());
+    void commitDate(date.toISOString(), false);
   };
 
   const clearTime = () => {
     if (!value) return;
     const date = new Date(value);
     date.setHours(0, 0, 0, 0);
-    void onChange(date.toISOString());
+    void commitDate(date.toISOString(), false);
   };
 
   const submitText = () => {
     const date = parseTextDate(textInput, value);
     if (date) void setDate(date);
+    else setError('Try a date such as tomorrow, 3d, or Sep 30.');
   };
 
   return (
@@ -105,6 +120,7 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
       <button
         ref={triggerRef}
         aria-expanded={open}
+        aria-haspopup="dialog"
         className="secondary-button"
         onClick={openPicker}
         type="button"
@@ -120,16 +136,16 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
                 aria-label="close date picker"
                 className={`fixed inset-0 z-[75] ${isMobile ? 'bg-black/50' : ''}`}
                 data-floating-overlay="true"
-                onClick={() => setOpen(false)}
+                disabled={pending}
+                onClick={() => { setOpen(false); triggerRef.current?.focus(); }}
+                tabIndex={-1}
                 type="button"
               />
-              <section
-                aria-label="Choose a date"
+              <DatePickerPanel
                 className={`${isMobile ? 'modal-in fixed inset-x-0 bottom-0 z-[80] w-full rounded-t-lg safe-bottom' : 'modal-in z-[80] w-72'} popover-panel overflow-hidden`}
-                data-floating-overlay="true"
-                onClick={(event) => event.stopPropagation()}
                 style={isMobile ? undefined : position}
               >
+                <fieldset aria-busy={pending} className="min-w-0" disabled={pending}>
                 <div className="flex flex-wrap gap-1.5 border-b border-border p-2">
                   <QuickDate label="today" onClick={() => setRelativeDate(0)} />
                   <QuickDate label="tomorrow" onClick={() => setRelativeDate(1)} />
@@ -170,8 +186,8 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
                         </button>
                       ))}
                     </div>
-                    <input className="ml-auto w-[76px] rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-text outline-none" onChange={(event) => applyTime(event.target.value)} type="time" value={timeValue} />
-                    {timeValue ? <button className="text-[10px] text-text-muted hover:text-danger" onClick={clearTime} type="button">×</button> : null}
+                    <input aria-label="Task time" className="ml-auto w-[76px] rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-text outline-none" onChange={(event) => applyTime(event.target.value)} type="time" value={timeValue} />
+                    {timeValue ? <button aria-label="Clear time" className="text-[10px] text-text-muted hover:text-danger" onClick={clearTime} type="button">×</button> : null}
                   </div>
                 ) : null}
 
@@ -201,13 +217,21 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
                     )}
                   </div>
                 </div>
-              </section>
+                </fieldset>
+                {pending ? <p className="px-3 pb-3 text-xs text-text-muted" role="status">Saving date…</p> : null}
+                {error ? <p className="px-3 pb-3 text-xs text-danger" role="alert">{error}</p> : null}
+              </DatePickerPanel>
             </>,
             document.body,
           )
         : null}
     </div>
   );
+}
+
+function DatePickerPanel({ className, style, children }: { className: string; style?: React.CSSProperties; children: React.ReactNode }) {
+  const dialogRef = useDialogFocus();
+  return <section ref={dialogRef} aria-label="Choose a date" aria-modal="true" className={className} data-floating-overlay="true" onClick={(event) => event.stopPropagation()} role="dialog" style={style} tabIndex={-1}>{children}</section>;
 }
 
 function QuickDate({ label, onClick }: { label: string; onClick: () => void }) {

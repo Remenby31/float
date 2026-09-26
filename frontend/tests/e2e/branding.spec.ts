@@ -71,7 +71,7 @@ test('details, notes, date and appearance controls use the new sheets', async ({
   await detail.getByRole('textbox', { name: 'Task title' }).press('Enter');
   await expect(detail.getByRole('button', { name: 'Read a few good pages' })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('task-details.png') });
-  await detail.locator('.task-property').first().getByRole('button').click();
+  await detail.locator('.detail-property').first().getByRole('button').click();
   await expect(page.getByRole('textbox', { name: 'Type a date' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(detail).toBeVisible();
@@ -109,7 +109,18 @@ test('brand kit, theme tokens, vector downloads, and login are available without
   for (const [theme, values] of Object.entries(tokens.themes) as [string, Record<string, string>][]) {
     await page.evaluate((theme) => document.documentElement.classList.toggle('light', theme === 'paper'), theme);
     for (const [key, value] of Object.entries(values)) {
-      expect(await page.evaluate((key) => getComputedStyle(document.documentElement).getPropertyValue(`--color-${key}`).trim(), key)).toBe(value);
+      const [actual, expected] = await page.evaluate(({ key, value }) => {
+        // Production CSS may shorten #ffffff to #fff: compare rendered colors.
+        const probe = document.createElement('span');
+        document.body.append(probe);
+        probe.style.color = `var(--color-${key})`;
+        const actual = getComputedStyle(probe).color;
+        probe.style.color = value;
+        const expected = getComputedStyle(probe).color;
+        probe.remove();
+        return [actual, expected];
+      }, { key, value });
+      expect(actual, `${theme}: ${key}`).toBe(expected);
     }
   }
   for (const asset of ['wordmark-ink.svg', 'wordmark-paper.svg', 'mark.svg', 'palette.svg', 'social-card.png', 'float-daybook-kit.zip']) {
@@ -139,7 +150,7 @@ test('keyboard focus returns to the task and reduced motion is respected', async
   const close = detail.getByRole('button', { name: 'close', exact: true });
   await close.focus();
   await page.keyboard.press('Shift+Tab');
-  await expect(detail.getByRole('button', { name: 'attach file (drop or click)' })).toBeFocused();
+  await expect(detail.getByRole('button', { name: 'Back to my day' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(close).toBeFocused();
   expect(await detail.evaluate((element) => parseFloat(getComputedStyle(element).animationDuration))).toBeLessThan(0.01);

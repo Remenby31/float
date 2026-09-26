@@ -1,7 +1,14 @@
 import type { Page } from '@playwright/test';
-import type { Project, Task } from '../../../src/types/api';
+import type { Attachment, Project, Task } from '../../../src/types/api';
 
-export async function mockDaybook(page: Page, options: { empty?: boolean; theme?: 'light' | 'dark' } = {}) {
+interface DaybookOptions {
+  empty?: boolean;
+  theme?: 'light' | 'dark';
+  taskOverrides?: Record<string, Partial<Task>>;
+  attachments?: Record<string, Attachment[]>;
+}
+
+export async function mockDaybook(page: Page, options: DaybookOptions = {}) {
   const user = { id: 'brand-user', email: 'daybook@example.test', username: 'Alex' };
   const makeProject = (id: string, title: string, parent_id: string | null = null): Project => ({
     id, title, parent_id, user_id: user.id, color: null, icon: null, description: null, is_archived: false, position: 0,
@@ -21,6 +28,9 @@ export async function mockDaybook(page: Page, options: { empty?: boolean; theme?
     makeTask('inbox', 'Clear a little space in the inbox', 'work'),
     makeTask('type', 'Find the right words', 'website'),
   ];
+  tasks = tasks.map((task) => ({ ...task, ...options.taskOverrides?.[task.id] }));
+  const attachments = structuredClone(options.attachments ?? {});
+  const failures = new Map<string, number>();
   const mutations: { method: string; path: string; body: any }[] = [];
   let sequence = 0;
 
@@ -33,16 +43,36 @@ export async function mockDaybook(page: Page, options: { empty?: boolean; theme?
     const request = route.request();
     const path = new URL(request.url()).pathname;
     const method = request.method();
+    const multipart = request.headers()['content-type']?.startsWith('multipart/form-data');
+    const body = request.postData() ? multipart ? { filename: request.postData()?.match(/filename="([^"]+)"/)?.[1] } : request.postDataJSON() : null;
+    if (method !== 'GET' && path !== '/api/auth/login') mutations.push({ method, path, body });
+    const failureKey = `${method} ${path}`;
+    if (failures.get(failureKey)) {
+      failures.set(failureKey, failures.get(failureKey)! - 1);
+      return route.fulfill({ status: 503, json: { error: 'Temporary test outage' } });
+    }
+    const attachmentPath = path.match(/^\/api\/projects\/[^/]+\/tasks\/([^/]+)\/attachments(?:\/([^/]+))?$/);
+    if (attachmentPath) {
+      const [, taskId, encodedName] = attachmentPath;
+      const name = encodedName ? decodeURIComponent(encodedName) : undefined;
+      if (method === 'GET' && !name) return route.fulfill({ json: attachments[taskId] ?? [] });
+      if (method === 'GET' && name) return route.fulfill({ contentType: 'application/octet-stream', body: 'Mock attachment contents' });
+      if (method === 'POST') {
+        attachments[taskId] = [...(attachments[taskId] ?? []), { name: body.filename ?? 'uploaded.txt', size: 128 }];
+        return route.fulfill({ status: 201, json: attachments[taskId] });
+      }
+      if (method === 'DELETE' && name) {
+        attachments[taskId] = (attachments[taskId] ?? []).filter((file) => file.name !== name);
+        return route.fulfill({ json: { deleted: true } });
+      }
+    }
     if (method === 'GET') {
       if (path === '/api/auth/me') return route.fulfill({ json: user });
       if (path === '/api/projects') return route.fulfill({ json: projects });
       if (path === '/api/tasks') return route.fulfill({ json: tasks });
       if (path === '/api/events') return route.fulfill({ status: 204 });
-      if (path.endsWith('/attachments')) return route.fulfill({ json: [] });
     }
     if (path === '/api/auth/login') return route.fulfill({ json: { token: 'daybook-isolated-test', user } });
-    const body = request.postData() ? request.postDataJSON() : null;
-    mutations.push({ method, path, body });
     const taskPath = path.match(/^\/api\/projects\/([^/]+)\/tasks(?:\/([^/]+))?$/);
     if (taskPath) {
       if (method === 'POST') {
@@ -51,7 +81,7 @@ export async function mockDaybook(page: Page, options: { empty?: boolean; theme?
         return route.fulfill({ status: 201, json: task });
       }
       if (method === 'PUT') {
-        tasks = tasks.map((task) => task.id === taskPath[2] ? { ...task, ...body } : task);
+        tasks = tasks.map((task) => task.id === taskPath[2] ? { ...task, ...body, project_id: body.new_project_id ?? task.project_id } : task);
         return route.fulfill({ json: tasks.find((task) => task.id === taskPath[2]) });
       }
       if (method === 'DELETE') {
@@ -75,5 +105,8 @@ export async function mockDaybook(page: Page, options: { empty?: boolean; theme?
     }
     return route.fulfill({ status: 404, json: { error: `Unexpected mock request: ${method} ${path}` } });
   });
-  return { mutations };
+  return {
+    mutations,
+    failNext: (method: string, path: string, count = 1) => failures.set(`${method} ${path}`, count),
+  };
 }
