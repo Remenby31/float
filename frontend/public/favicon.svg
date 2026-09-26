@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0A0A0A"/>
-  <circle cx="16" cy="12" r="7" fill="#FAFAFA"/>
-  <ellipse cx="16" cy="26" rx="6" ry="1.5" fill="#FAFAFA" opacity="0.15"/>
+  <title>Float</title>
+  <path fill="#292927" d="M0 0h32v32H0z"/>
+  <path fill="#efeeea" d="M8 6h17v5H13v5h10v5H13v5H8z"/>
+  <path fill="#f45b24" d="M22 22h4v4h-4z"/>
 </svg>

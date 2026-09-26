@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && tsc -b",
+    "brand:assets": "bash scripts/generate-brand-assets.sh",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

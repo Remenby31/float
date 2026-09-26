@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { CheckIcon, ChevronRightIcon, PlusIcon, SearchIcon } from '@/components/icons';
+import { useDialogFocus } from '@/hooks/use-dialog-focus';
+import { useUiStore } from '@/stores/ui-store';
 import type { WorkspaceModel } from '@/features/workspace/hooks/use-workspace';
 import { startOfDay } from '@/features/workspace/utils/dates';
 import { getSuggestions, parseInput, type Suggestion } from '@/features/workspace/utils/smart-input';
@@ -10,6 +12,7 @@ interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspace: WorkspaceModel;
+  defaultDate?: string | null;
 }
 
 interface Result {
@@ -21,7 +24,9 @@ interface Result {
   isDone?: boolean;
 }
 
-export function CommandPalette({ open, onOpenChange, workspace }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, workspace, defaultDate }: CommandPaletteProps) {
+  const dialogRef = useDialogFocus();
+  const [submitting, setSubmitting] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const taskInputRef = useRef<HTMLInputElement>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +130,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
   };
 
   const submitCreatedTask = async () => {
+    if (submitting) return;
     const title = creatingTask.trim();
     if (!title) {
       taskInputRef.current?.focus();
@@ -136,12 +142,20 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
     }
     const parsed = parseInput(creatingTask);
     const projectId = selectedProjectId;
-    await workspace.createTask(projectId, {
-      title: parsed.title || title,
-      due_date: parsed.due_date ?? startOfDay(new Date()).toISOString(),
-    });
-    onOpenChange(false);
-    window.setTimeout(() => document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    setSubmitting(true);
+    try {
+      await workspace.createTask(projectId, {
+        title: parsed.title || title,
+        due_date: parsed.due_date ?? defaultDate ?? startOfDay(new Date()).toISOString(),
+      });
+      onOpenChange(false);
+      useUiStore.getState().setWorkspaceView('projects');
+      window.setTimeout(() => document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    } catch {
+      // The mutation reports the error; keep the draft available for retry.
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const activate = (result: Result) => {
@@ -150,6 +164,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
       return;
     }
     onOpenChange(false);
+    useUiStore.getState().setWorkspaceView('projects');
     const projectId = result.type === 'project' ? result.id : result.projectId;
     window.setTimeout(() => document.getElementById(`project-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
   };
@@ -244,8 +259,9 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
 
   return (
     <div className="fixed inset-0 z-[90] flex items-start justify-center px-4 pt-[12vh] md:pt-[15vh]" onKeyDown={onKeyDown}>
-      <button aria-label="close command palette" className="fade-in absolute inset-0 bg-black/55 backdrop-blur-[4px]" onClick={() => onOpenChange(false)} type="button" />
-      <section aria-label="command palette" aria-modal="true" className="modal-in relative w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-elevated/95 shadow-[0_28px_100px_rgba(0,0,0,0.38)] backdrop-blur-2xl" role="dialog">
+      <button aria-label="close command palette" className="fade-in overlay-backdrop" onClick={() => onOpenChange(false)} tabIndex={-1} type="button" />
+      <section ref={dialogRef} aria-label="command palette" aria-modal="true" className="dialog-surface modal-in relative max-h-[80dvh] w-full max-w-xl overflow-y-auto" role="dialog" tabIndex={-1}>
+        <header className="dialog-kicker"><p className="eyebrow">{creatingTask ? 'One less thing to remember' : 'Find your next thing'}{defaultDate ? ` / ${new Date(defaultDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}` : ''}</p><button aria-label="Close search" className="icon-button !h-8 !w-8" onClick={() => onOpenChange(false)} type="button">×</button></header>
         {creatingTask ? (
           <>
             <div className="border-b border-border/70 px-4 pb-3 pt-4">
@@ -253,7 +269,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
                 <input
                   ref={taskInputRef}
                   aria-label="new task"
-                  className="min-w-0 flex-1 bg-transparent text-[15px] leading-6 text-text outline-none placeholder:text-text-muted/60"
+                  className="min-w-0 flex-1 bg-transparent text-[15px] leading-6 text-text outline-none placeholder:text-text-muted"
                   onChange={(event) => {
                     setCreatingTask(event.target.value);
                     updateAtSuggestions(event.target.value, 'create');
@@ -261,12 +277,12 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
                   placeholder="new task..."
                   value={creatingTask}
                 />
-                <DateChip value={parsedPreview.due_date ?? startOfDay(new Date()).toISOString()} />
+                <DateChip value={parsedPreview.due_date ?? defaultDate ?? startOfDay(new Date()).toISOString()} />
               </div>
               {showAtSuggestions && atSource === 'create' ? <SuggestionList items={atSuggestions} selectedIndex={atSelectedIndex} onSelect={applyAtSuggestion} /> : null}
               <div className="mt-3 flex items-center gap-2">
                 <button className="inline-flex min-w-0 items-center gap-1.5 rounded-md border border-border bg-surface/70 px-2 py-1 text-xs text-text-secondary hover:bg-surface hover:text-text" onClick={focusProjectInput} type="button">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: selectedProject?.color ?? '#777d72' }} />
+                  <span className="h-1.5 w-1.5 shrink-0" style={{ background: selectedProject?.color ?? '#777d72' }} />
                   <span className="max-w-[220px] truncate">{selectedProject?.title ?? 'project'}</span>
                 </button>
               </div>
@@ -278,7 +294,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
                   <input
                     ref={projectInputRef}
                     aria-label="project"
-                    className="w-full bg-transparent text-sm text-text outline-none placeholder:text-text-muted/60"
+                    className="w-full bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
                     onChange={(event) => {
                       setProjectQuery(event.target.value);
                       setProjectIndex(0);
@@ -292,7 +308,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
                   {visibleProjects.map((project, index) => (
                     <button className="block w-full px-3 py-0.5 text-left" key={project.id} onClick={() => selectProject(project.id)} type="button">
                       <span className={`flex items-center gap-2.5 rounded-md px-2 py-2 text-sm ${index === projectIndex ? 'bg-surface text-text' : selectedProjectId === project.id ? 'bg-surface/60 text-text' : 'text-text-secondary hover:bg-surface/50'}`}>
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: project.color ?? '#525252' }} />
+                        <span className="h-1.5 w-1.5 shrink-0" style={{ background: project.color ?? '#525252' }} />
                         <span className="truncate">{project.title}</span>
                         <span className="ml-auto flex min-w-0 items-center gap-2">
                           {parentName(project, workspace.projects) ? <span className="max-w-[110px] truncate text-[10px] text-text-muted">{parentName(project, workspace.projects)}</span> : null}
@@ -301,7 +317,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
                       </span>
                     </button>
                   ))}
-                  {!visibleProjects.length ? <p className="px-4 py-5 text-center text-sm text-text-muted">no match</p> : null}
+                  {!visibleProjects.length ? <p className="px-4 py-5 text-sm text-text-muted">{workspace.projects.length ? 'No matching projects. Try another name.' : 'Create a group in your workspace first.'}</p> : null}
                 </div>
               </div>
             ) : null}
@@ -313,7 +329,7 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
               <input
                 ref={searchInputRef}
                 aria-label="search or create a task..."
-                className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-muted/60"
+                className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
                 onChange={(event) => {
                   setQuery(event.target.value);
                   setSelectedIndex(0);
@@ -330,16 +346,17 @@ export function CommandPalette({ open, onOpenChange, workspace }: CommandPalette
               {query.trim() && results.length ? (
                 <>
                   {createFirst ? <CreateResult active={selectedIndex === 0} query={query} onClick={startCreate} prominent /> : null}
-                  {projectResults.length ? <ResultGroup label="projects">{projectResults.map((result) => <ResultButton active={results.indexOf(result) === selectedIndex} key={result.id} onClick={() => activate(result)}><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: workspace.projects.find((project) => project.id === result.id)?.color ?? '#525252' }} /><span className="truncate text-sm">{result.title}</span><ChevronRightIcon className="ml-auto shrink-0 text-text-muted" size={12} /></ResultButton>)}</ResultGroup> : null}
-                  {taskResults.length ? <ResultGroup label="tasks">{taskResults.map((result) => <ResultButton active={results.indexOf(result) === selectedIndex} key={result.id} onClick={() => activate(result)}><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" /><span className={`truncate text-sm ${result.isDone ? 'line-through opacity-50' : ''}`}>{result.title}</span>{result.projectName ? <span className="ml-auto max-w-[120px] shrink-0 truncate text-[10px] text-text-muted">{result.projectName}</span> : null}</ResultButton>)}</ResultGroup> : null}
+                  {projectResults.length ? <ResultGroup label="projects">{projectResults.map((result) => <ResultButton active={results.indexOf(result) === selectedIndex} key={result.id} onClick={() => activate(result)}><span className="h-2 w-2 shrink-0" style={{ background: workspace.projects.find((project) => project.id === result.id)?.color ?? '#525252' }} /><span className="truncate text-sm">{result.title}</span><ChevronRightIcon className="ml-auto shrink-0 text-text-muted" size={12} /></ResultButton>)}</ResultGroup> : null}
+                  {taskResults.length ? <ResultGroup label="tasks">{taskResults.map((result) => <ResultButton active={results.indexOf(result) === selectedIndex} key={result.id} onClick={() => activate(result)}><span className="h-1.5 w-1.5 shrink-0 bg-text-muted" /><span className={`truncate text-sm ${result.isDone ? 'line-through opacity-50' : ''}`}>{result.title}</span>{result.projectName ? <span className="ml-auto max-w-[120px] shrink-0 truncate text-[10px] text-text-muted">{result.projectName}</span> : null}</ResultButton>)}</ResultGroup> : null}
                   {!createFirst ? <CreateResult active={results.findIndex((result) => result.type === 'create') === selectedIndex} query={query} onClick={startCreate} /> : null}
                   <div className="h-1" />
                 </>
-              ) : !query.trim() ? <p className="px-4 py-8 text-center text-xs text-text-muted">type to search or create</p> : null}
+              ) : !query.trim() ? <div className="px-6 py-10"><p className="section-title mb-3">A clear place to start.</p><p className="text-sm text-text-muted">Find a project, revisit a task, or write down something new.</p><p className="mt-5 text-xs text-text-muted">Try <span className="text-text-secondary">Read 10 pages @tomorrow</span></p></div> : null}
             </div>
             {results.length ? <footer className="hidden items-center gap-4 border-t border-border px-4 py-2 text-[10px] text-text-muted md:flex"><span><kbd className="rounded border border-border bg-surface px-1 py-0.5 font-mono">↑↓</kbd> navigate</span><span><kbd className="rounded border border-border bg-surface px-1 py-0.5 font-mono">↵</kbd> open</span></footer> : null}
           </>
         )}
+        {creatingTask && selectedProjectId && !projectPickerOpen ? <footer className="flex items-center justify-between gap-4 border-t border-border px-4 py-3"><span className="text-xs text-text-muted">{submitting ? 'Adding your task…' : 'Ready when you are.'}</span><button className="primary-button" disabled={submitting || !creatingTask.trim()} onClick={() => void submitCreatedTask()} type="button">Add task <span aria-hidden="true">↵</span></button></footer> : null}
       </section>
     </div>
   );

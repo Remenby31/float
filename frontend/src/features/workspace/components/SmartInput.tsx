@@ -11,6 +11,7 @@ interface SmartInputProps {
   multiline?: boolean;
   autoFocus?: boolean;
   onBlurSubmit?: boolean;
+  showSubmit?: boolean;
   onLiveInput?: (value: string) => void;
   onSubmit: (task: ParsedTask) => void | Promise<void>;
 }
@@ -24,6 +25,7 @@ export function SmartInput({
   multiline = false,
   autoFocus = false,
   onBlurSubmit = false,
+  showSubmit = false,
   onLiveInput,
   onSubmit,
 }: SmartInputProps) {
@@ -117,20 +119,20 @@ export function SmartInput({
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative min-w-0 w-full">
       <div className="relative">
         {multiline ? (
           <textarea
             {...commonProps}
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            className={inline ? 'w-full resize-none overflow-hidden bg-transparent p-0 text-text outline-none placeholder:text-text-muted/50' : 'field min-h-24 resize-y'}
+            className={inline ? 'w-full resize-none overflow-hidden bg-transparent p-0 text-text outline-none placeholder:text-text-muted' : 'field min-h-24 resize-y'}
             rows={1}
           />
         ) : (
           <input
             {...commonProps}
             ref={inputRef as React.RefObject<HTMLInputElement>}
-            className={inline ? 'w-full bg-transparent p-0 text-text outline-none placeholder:text-text-muted/50' : `field ${parsed.due_date ? 'pr-24' : ''}`}
+            className={inline ? 'w-full bg-transparent p-0 text-text outline-none placeholder:text-text-muted' : `field ${parsed.due_date ? 'pr-24' : ''}`}
           />
         )}
 
@@ -140,9 +142,10 @@ export function SmartInput({
           </span>
         ) : null}
       </div>
+      {showSubmit ? <button className="secondary-button mt-2" disabled={!parsed.title.trim()} onClick={() => void submit()} type="button">Add task <span aria-hidden="true">↵</span></button> : null}
 
       {showSuggestions ? (
-        <div className={`absolute left-0 right-0 z-30 overflow-hidden rounded-xl border border-border bg-elevated shadow-xl ${inline ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+        <div className={`popover-panel absolute left-0 right-0 z-30 overflow-hidden ${inline ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
           {suggestions.map((suggestion, index) => (
             <button
               className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${index === selectedIndex ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/50'}`}

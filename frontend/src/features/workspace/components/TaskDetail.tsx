@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { CheckIcon, CloseIcon, PaperclipIcon, TrashIcon } from '@/components/icons';
+import { CloseIcon, PaperclipIcon, TrashIcon } from '@/components/icons';
+import { TaskCheckbox } from '@/components/TaskCheckbox';
+import { useDialogFocus } from '@/hooks/use-dialog-focus';
 import { api } from '@/lib/api/client';
 import { toast } from '@/stores/toast-store';
 import { attachmentsQueryOptions, workspaceKeys } from '@/features/workspace/api/queries';
@@ -16,6 +18,7 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({ taskId, workspace, onClose }: TaskDetailProps) {
+  const dialogRef = useDialogFocus();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const task = workspace.tasks.find((candidate) => candidate.id === taskId);
@@ -94,34 +97,30 @@ export function TaskDetail({ taskId, workspace, onClose }: TaskDetailProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center md:items-stretch md:px-4 md:py-10">
-      <button aria-label="close task" className="fade-in absolute inset-0 bg-black/55 backdrop-blur-[4px]" onClick={onClose} type="button" />
+    <div className="fixed inset-0 z-[70] flex items-end justify-center md:items-center md:px-4 md:py-10">
+      <button aria-label="close task" className="fade-in overlay-backdrop" onClick={onClose} tabIndex={-1} type="button" />
       <section
+        ref={dialogRef}
         aria-label="task details"
         aria-modal="true"
-        className="modal-in relative flex max-h-[92vh] w-full flex-col rounded-t-2xl border-t border-border bg-elevated shadow-2xl safe-bottom md:h-full md:max-w-4xl md:rounded-2xl md:border"
+        className="task-detail dialog-surface modal-in"
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
           if (event.dataTransfer.files.length) void uploadFiles(event.dataTransfer.files);
         }}
         role="dialog"
+        tabIndex={-1}
       >
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+        <div className="dialog-kicker"><span className="eyebrow">Task / {task.is_done ? 'Done & dusted' : 'One thing at a time'}</span><button aria-label="close" className="icon-button !h-8 !w-8" onClick={onClose} type="button"><CloseIcon size={16} /></button></div>
+        <header className="task-detail-header">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <button
-              aria-label="toggle done"
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition hover:scale-110"
-              onClick={() => void workspace.updateTask(projectId, task.id, { is_done: !task.is_done })}
-              style={{ borderColor: task.is_done ? 'var(--color-success)' : 'var(--color-border-strong)', background: task.is_done ? 'var(--color-success)' : 'transparent' }}
-              type="button"
-            >
-              {task.is_done ? <CheckIcon className="text-white" size={12} /> : null}
-            </button>
+            <TaskCheckbox checked={task.is_done} onClick={() => void workspace.updateTask(projectId, task.id, { is_done: !task.is_done })} />
             {editingTitle ? (
               <input
                 autoFocus
-                className="min-w-0 flex-1 bg-transparent text-lg font-medium leading-snug text-text outline-none"
+                aria-label="Task title"
+                className="task-detail-title bg-transparent"
                 onBlur={() => void saveTitle()}
                 onChange={(event) => setTitle(event.target.value)}
                 onKeyDown={(event) => {
@@ -134,43 +133,42 @@ export function TaskDetail({ taskId, workspace, onClose }: TaskDetailProps) {
                 value={title}
               />
             ) : (
-              <button className={`min-w-0 flex-1 truncate text-left text-lg font-medium leading-snug hover:text-text-secondary ${task.is_done ? 'text-text-muted line-through' : 'text-text'}`} onClick={() => { setTitle(task.title); setEditingTitle(true); }} type="button">{task.title}</button>
+              <button className={`task-detail-title hover:text-text-secondary ${task.is_done ? 'task-done' : ''}`} onClick={() => { setTitle(task.title); setEditingTitle(true); }} type="button">{task.title}</button>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {confirmingDelete ? (
               <>
                 <span className="mr-1 text-xs text-danger">delete?</span>
-                <button className="rounded-lg bg-danger px-2 py-1 text-xs text-white" onClick={async () => { await workspace.deleteTask(projectId, task.id); onClose(); }} type="button">yes</button>
-                <button className="rounded-lg px-2 py-1 text-xs text-text-muted hover:text-text" onClick={() => setConfirmingDelete(false)} type="button">no</button>
+                <button className="secondary-button !text-danger" onClick={async () => { await workspace.deleteTask(projectId, task.id); onClose(); }} type="button">yes</button>
+                <button className="secondary-button" onClick={() => setConfirmingDelete(false)} type="button">no</button>
               </>
             ) : (
               <button className="icon-button hover:!text-danger" onClick={() => setConfirmingDelete(true)} title="delete" type="button"><TrashIcon size={14} /></button>
             )}
-            <button aria-label="close" className="icon-button" onClick={onClose} type="button"><CloseIcon size={14} /></button>
           </div>
         </header>
 
-        <div className="scrollbar-thin flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5 md:px-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3">
-              <p className="w-10 text-[10px] uppercase tracking-wider text-text-muted">due</p>
+        <div className="task-detail-body scrollbar-thin">
+          <div className="task-properties">
+            <div className="task-property">
+              <p className="eyebrow">When</p>
               <DatePicker value={task.due_date} onChange={async (due_date) => { await workspace.updateTask(projectId, task.id, { due_date }); }} />
             </div>
-            <div className="flex items-center gap-3">
-              <p className="w-10 text-[10px] uppercase tracking-wider text-text-muted">in</p>
+            <div className="task-property">
+              <p className="eyebrow">Where</p>
               <div className="relative">
-                <button className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-text-secondary hover:bg-surface/50 hover:text-text" onClick={() => setProjectPickerOpen((value) => !value)} type="button">
-                  {currentProject?.icon ? <span>{currentProject.icon}</span> : <span className="h-2 w-2 rounded-full" style={{ background: currentProject?.color ?? '#525252' }} />}
+                <button aria-expanded={projectPickerOpen} className="secondary-button" onClick={() => setProjectPickerOpen((value) => !value)} type="button">
+                  {currentProject?.icon ? <span>{currentProject.icon}</span> : <span className="h-2 w-2" style={{ background: currentProject?.color ?? '#525252' }} />}
                   <span>{currentProject?.title ?? 'unknown'}</span>
                 </button>
                 {projectPickerOpen ? (
                   <>
                     <button aria-label="close project picker" className="fixed inset-0 z-10" onClick={() => setProjectPickerOpen(false)} type="button" />
-                    <div className="scrollbar-thin absolute left-0 top-full z-20 mt-1 max-h-52 w-52 overflow-y-auto rounded-xl border border-border bg-elevated py-1 shadow-xl">
+                    <div className="popover-panel scrollbar-thin absolute left-0 top-full z-20 mt-1 max-h-52 w-52 overflow-y-auto py-1">
                       {leafProjects.map((project) => (
-                        <button className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs ${project.id === projectId ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/60'}`} key={project.id} onClick={async () => { await workspace.moveTask(projectId, task.id, project.id); setProjectPickerOpen(false); }} type="button">
-                          {project.icon ? <span>{project.icon}</span> : <span className="h-2 w-2 rounded-full" style={{ background: project.color ?? '#525252' }} />}
+                        <button className={`flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-xs ${project.id === projectId ? 'bg-surface text-text' : 'text-text-secondary hover:bg-surface/60'}`} key={project.id} onClick={async () => { await workspace.moveTask(projectId, task.id, project.id); setProjectPickerOpen(false); }} type="button">
+                          {project.icon ? <span>{project.icon}</span> : <span className="h-2 w-2" style={{ background: project.color ?? '#525252' }} />}
                           <span className="truncate">{project.title}</span>
                         </button>
                       ))}
@@ -181,7 +179,8 @@ export function TaskDetail({ taskId, workspace, onClose }: TaskDetailProps) {
             </div>
           </div>
 
-          <div className="relative flex min-h-[240px] flex-1 flex-col rounded-xl border border-border-subtle bg-bg/25 p-4">
+          <p className="eyebrow">Notes & details</p>
+          <div className="note-surface">
             <NoteEditor content={task.description ?? ''} onSave={async (html) => { await workspace.updateTask(projectId, task.id, { description: html || null }); }} />
             <div className="absolute bottom-2 right-2">
               <input ref={fileInputRef} className="hidden" multiple onChange={(event) => event.target.files && void uploadFiles(event.target.files)} type="file" />
@@ -194,11 +193,11 @@ export function TaskDetail({ taskId, workspace, onClose }: TaskDetailProps) {
           {attachments.data?.length ? (
             <div className="flex flex-wrap gap-2">
               {attachments.data.map((attachment) => (
-                <div className="group flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted" key={attachment.name}>
+                <div className="attachment" key={attachment.name}>
                   <PaperclipIcon size={10} />
                   <button className="max-w-[180px] truncate hover:text-text" onClick={() => void downloadAttachment(attachment.name)} type="button">{attachment.name}</button>
-                  <span className="text-[9px] text-text-muted/70">{formatBytes(attachment.size)}</span>
-                  <button aria-label={`delete ${attachment.name}`} className="ml-0.5 grid h-4 w-4 place-items-center opacity-0 hover:text-danger group-hover:opacity-100" onClick={async () => { await api.deleteAttachment(projectId, task.id, attachment.name); await queryClient.invalidateQueries({ queryKey: workspaceKeys.attachments(projectId, task.id) }); }} type="button"><CloseIcon size={8} /></button>
+                  <span className="text-[9px] text-text-muted">{formatBytes(attachment.size)}</span>
+                  <button aria-label={`delete ${attachment.name}`} className="icon-button hover:!text-danger" onClick={async () => { await api.deleteAttachment(projectId, task.id, attachment.name); await queryClient.invalidateQueries({ queryKey: workspaceKeys.attachments(projectId, task.id) }); }} type="button"><CloseIcon size={12} /></button>
                 </div>
               ))}
             </div>

@@ -1,12 +1,12 @@
 {
   "name": "Float",
   "short_name": "Float",
-  "description": "Minimal task manager",
+  "description": "Less noise. More doing. Your tasks, one day at a time.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#10110f",
-  "theme_color": "#10110f",
+  "background_color": "#efeeea",
+  "theme_color": "#efeeea",
   "icons": [
     {
       "src": "/icon-192.png",

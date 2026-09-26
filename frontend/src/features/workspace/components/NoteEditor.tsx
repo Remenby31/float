@@ -36,7 +36,7 @@ export function NoteEditor({ content, placeholder = 'write something...', onSave
       SaveShortcut,
     ],
     content: processContent(content),
-    editorProps: { attributes: { 'data-placeholder': placeholder } },
+    editorProps: { attributes: { 'data-placeholder': placeholder, 'aria-label': 'Task notes', role: 'textbox', 'aria-multiline': 'true' } },
     onCreate: ({ editor: currentEditor }) => setEmpty(currentEditor.isEmpty),
     onUpdate: ({ editor: currentEditor }) => setEmpty(currentEditor.isEmpty),
     onBlur: ({ editor: currentEditor }) => {
@@ -89,7 +89,7 @@ export function NoteEditor({ content, placeholder = 'write something...', onSave
     <div ref={wrapperRef} className={`note-editor ${empty ? 'is-empty' : ''}`}>
       <EditorContent className="flex min-h-full flex-1" editor={editor} />
       {toolbar ? (
-        <div className="absolute z-20 flex items-center gap-0.5 rounded-lg border border-border bg-elevated px-1 py-0.5 shadow-lg" style={toolbar}>
+        <div aria-label="Text formatting" className="popover-panel absolute z-20 flex items-center gap-0.5 px-1 py-0.5" role="toolbar" style={toolbar}>
           <ToolbarButton active={marks.bold} label="bold" onMouseDown={() => editor.chain().focus().toggleBold().run()}><strong>B</strong></ToolbarButton>
           <ToolbarButton active={marks.italic} label="italic" onMouseDown={() => editor.chain().focus().toggleItalic().run()}><em>I</em></ToolbarButton>
           <span className="mx-0.5 h-4 w-px bg-border" />
@@ -105,7 +105,8 @@ function ToolbarButton({ active, label, onMouseDown, children }: { active: boole
   return (
     <button
       aria-label={label}
-      className={`flex h-6 w-6 items-center justify-center rounded text-xs ${active ? 'bg-surface text-text' : 'text-text-muted hover:text-text'}`}
+      aria-pressed={active}
+      className={`flex h-9 w-9 items-center justify-center rounded-sm text-xs ${active ? 'bg-surface text-accent' : 'text-text-muted hover:text-text'}`}
       onMouseDown={(event) => {
         event.preventDefault();
         onMouseDown();

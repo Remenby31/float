@@ -2,6 +2,7 @@ import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { ToastViewport } from '@/components/ToastViewport';
+import { Brand } from '@/components/Brand';
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -10,17 +11,19 @@ interface RouterContext {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
   errorComponent: ({ error, reset }) => (
-    <main className="grid min-h-screen place-items-center bg-bg px-5 text-text">
-      <section className="w-full max-w-md rounded-2xl border border-border bg-elevated p-5 shadow-xl">
-        <p className="text-sm font-medium">Float hit an unexpected error.</p>
-        <p className="mt-2 break-words text-xs leading-5 text-text-muted">{error.message}</p>
+    <main className="state-page">
+      <section className="state-content">
+        <Brand />
+        <h1 className="display-title">A small<br />pause.</h1>
+        <p>Something didn’t load. Let’s give it another go.</p>
+        <p className="break-words text-xs">{error.message}</p>
         <button className="primary-button mt-5 px-4" onClick={reset} type="button">try again</button>
       </section>
     </main>
   ),
   notFoundComponent: () => (
-    <main className="grid min-h-screen place-items-center bg-bg text-text">
-      <p className="text-sm text-text-muted">nothing here</p>
+    <main className="state-page">
+      <section className="state-content"><Brand /><h1 className="display-title">Off the<br />page.</h1><p>There’s nothing at this address. Your tasks are right where you left them.</p><a className="primary-button" href="/app">Back to your workspace ↗</a></section>
     </main>
   ),
 });

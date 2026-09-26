@@ -11,7 +11,7 @@ function Icon({ size = 16, children, ...props }: IconProps) {
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth="2"
+      strokeWidth="1.65"
       viewBox="0 0 24 24"
       width={size}
       {...props}

@@ -66,6 +66,7 @@ for (const scenario of [
     await title.press('Enter');
     await expect(palette).toHaveCount(0);
     expect(created).toEqual([{ title: 'Prepare launch', due_date: scenario.dueDate }]);
-    await expect(page.getByText('Prepare launch', { exact: true }).first()).toBeVisible();
+    // The mobile layout keeps the inactive agenda mounted but hidden.
+    await expect(page.getByRole('button', { name: 'Prepare launch', exact: true }).first()).toBeVisible();
   });
 }
